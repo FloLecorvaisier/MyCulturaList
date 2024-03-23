@@ -18,7 +18,8 @@ function(input, output, session) {
     df_season <- data.frame(title = character(length(list_of_animes)),
                             type = character(length(list_of_animes)),
                             year = numeric(length(list_of_animes)),
-                            season = numeric(length(list_of_animes)))
+                            season = numeric(length(list_of_animes)),
+                            score = numeric(length(list_of_animes)))
     
     for (i in 1:length(list_of_animes)) {
       if (list_of_animes[[i]]$list_status$status == "completed") {
@@ -26,10 +27,11 @@ function(input, output, session) {
         df_season$type[i] <- list_of_animes[[i]]$node$media_type
         df_season$year[i] <- list_of_animes[[i]]$node$start_season$year
         df_season$season[i] <- list_of_animes[[i]]$node$start_season$season
+        df_season$score[i] <- list_of_animes[[i]]$list_status$score
       }
     }
-    
     df_season <- df_season[df_season$season != 0, ]
+    
     table_season <- as.data.frame(with(df_season, table(type, year, season)))
     table_season$year <- as.numeric(as.character(table_season$year))
     table_season$season <- factor(table_season$season, levels = c("winter", "spring", "summer", "fall"))
@@ -43,6 +45,21 @@ function(input, output, session) {
         scale_y_continuous(limits = c(0, max(tapply(table_season$Freq, table_season$year, sum)))) +
         labs(x = element_blank(), y = element_blank(), fill = element_blank()) +
         ggtitle("Number of animes watched per season of first diffusion") +
+        theme_minimal(base_family = "Avenir Next LT Pro", base_size = 12)
+    }, res = 96)
+    
+    
+    #### Number of animes per 
+    
+    table_score <- as.data.frame(with(df_season, table(score)))
+    table_score$score <- as.numeric(as.character(table_score$score))
+    
+    output$scoreplot <- renderPlot({
+      ggplot(table_score) +
+        geom_col(aes(x = score, y = Freq), fill = "darkolivegreen4") +
+        scale_x_continuous(breaks = 1:10, limits = c(.5, 10.5)) +
+        labs(x = element_blank(), y = element_blank()) +
+        ggtitle("Number of animes watched per personal score") +
         theme_minimal(base_family = "Avenir Next LT Pro", base_size = 12)
     }, res = 96)
   })

@@ -24,7 +24,8 @@ ui <- dashboardPage(
                     actionButton("load_user", "Load user")),
               ),
               fluidRow(
-                box(plotOutput("seasonplot"))
+                box(plotOutput("seasonplot")),
+                box(plotOutput("scoreplot"))
               )
       )
     )
