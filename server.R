@@ -1,9 +1,12 @@
 output = list(); input = list(); input$user_mal = "ScienceLeaf"
 
-css_infobox <- "font-size: 18px; font-family: Ubuntu"
+css_infobox <- "font-size: 16px; font-family: Aleo"
 
 
-function(input, output, session) {
+
+function(input, output) {
+  
+  font_plot <- "Aleo"
   
   #### Loading data using the API ####
   
@@ -16,9 +19,9 @@ function(input, output, session) {
     xx <- fromJSON(content(x, "text"), simplifyVector = FALSE)
     if (object.size(xx) > 1024) { ## To check that the user name exists
       list_of_animes <- xx$data
-      
+
       #### Infoboxes ####
-      
+
       infobox_animes <- data.frame(completed = numeric(5),
                                    watching = numeric(5),
                                    plan_to_watch = numeric(5),
@@ -27,73 +30,43 @@ function(input, output, session) {
                                    eps = numeric(5),
                                    time = numeric(5),
                                    row.names = c("movie", "ona", "ova", "tv", "special"))
-      
-      
+
+
       for (anime in list_of_animes) {
         infobox_animes[anime$node$media_type, anime$list_status$status] <- infobox_animes[anime$node$media_type, anime$list_status$status] + 1
-        
+
         infobox_animes$eps[rownames(infobox_animes) == anime$node$media_type] <-
-          infobox_animes$eps[rownames(infobox_animes) == anime$node$media_type] + 
+          infobox_animes$eps[rownames(infobox_animes) == anime$node$media_type] +
           anime$list_status$num_episodes_watched
-        
-        infobox_animes$time[rownames(infobox_animes) == anime$node$media_type] <- 
-          infobox_animes$time[rownames(infobox_animes) == anime$node$media_type] + 
+
+        infobox_animes$time[rownames(infobox_animes) == anime$node$media_type] <-
+          infobox_animes$time[rownames(infobox_animes) == anime$node$media_type] +
           anime$node$average_episode_duration * anime$list_status$num_episodes_watched
       }
       infobox_animes <- infobox_animes[1:5, ] # Temporary, just because MAL added "tv_special" and "cm", which are not represented...
+      infobox_animes <- rbind(infobox_animes, apply(infobox_animes, 2, sum))
+      rownames(infobox_animes)[6] <- "general"
+      infobox_animes$time <- seconds_to_period(infobox_animes$time)
+      infobox_animes$type <- c("Movies", "ONAs", "OVAs", "TVs", "Specials", "General")
+
+      ## Rendering the values in the different infoboxes
+      ll <- levels(interaction(colnames(infobox_animes)[c(1:3, 5:7)], rownames(infobox_animes), sep = "|"))
+      lapply(ll, function(k) {
+        # output[[k]] <- renderText(infobox_animes[rownames(infobox_animes) == gsub(".*\\|(.*)", "\\1", k), colnames(infobox_animes) == gsub("(.*)\\|.*", "\\1", k)])
+        output[[k]] <- renderUI(tags$p(infobox_animes[rownames(infobox_animes) == gsub(".*\\|(.*)", "\\1", k), colnames(infobox_animes) == gsub("(.*)\\|.*", "\\1", k)], 
+                                style = css_infobox))
+      })
       
-      infobox_animes$type = c("Movies", "ONAs", "OVAs", "TVs", "Specials")
-      
-      output$all_cmpl <- renderUI(tags$p(sum(infobox_animes$completed, na.rm = T), style = css_infobox))
-      output$all_cw <- renderUI(tags$p(sum(infobox_animes$watching, na.rm = T), style = css_infobox))
-      output$all_ptw <- renderUI(tags$p(sum(infobox_animes$plan_to_watch, na.rm = T), style = css_infobox))
-      output$all_hld <- renderUI(tags$p(sum(infobox_animes$on_hold, na.rm = T), style = css_infobox))
-      output$all_eps <- renderUI(tags$p(sum(infobox_animes$eps, na.rm = T), style = css_infobox))
-      output$all_time <- renderUI(tags$p(gsub("(.*)M.*", "\\1M", seconds_to_period(sum(infobox_animes$time, na.rm = T))), style = css_infobox))
-      
-      output$movie_cmpl <- renderUI(tags$p(infobox_animes$completed[rownames(infobox_animes) == "movie"], style = css_infobox))
-      output$movie_cw <- renderUI(tags$p(infobox_animes$watching[rownames(infobox_animes) == "movie"], style = css_infobox))
-      output$movie_ptw <- renderUI(tags$p(sum(infobox_animes$plan_to_watch[rownames(infobox_animes) == "movie"], na.rm = T), style = css_infobox))
-      output$movie_hld <- renderUI(tags$p(sum(infobox_animes$on_hold[rownames(infobox_animes) == "movie"], na.rm = T), style = css_infobox))
-      output$movie_eps <- renderUI(tags$p(infobox_animes$eps[rownames(infobox_animes) == "movie"], style = css_infobox))
-      output$movie_time <- renderUI(tags$p(gsub("(.*)M.*", "\\1M", seconds_to_period(infobox_animes$time[rownames(infobox_animes) == 'movie'])), style = css_infobox))
-      
-      output$tv_cmpl <- renderUI(tags$p(infobox_animes$completed[rownames(infobox_animes) == "tv"], style = css_infobox))
-      output$tv_cw <- renderUI(tags$p(infobox_animes$watching[rownames(infobox_animes) == "tv"], style = css_infobox))
-      output$tv_ptw <- renderUI(tags$p(sum(infobox_animes$plan_to_watch[rownames(infobox_animes) == "tv"], na.rm = T), style = css_infobox))
-      output$tv_hld <- renderUI(tags$p(sum(infobox_animes$on_hold[rownames(infobox_animes) == "tv"], na.rm = T), style = css_infobox))
-      output$tv_eps <- renderUI(tags$p(infobox_animes$eps[rownames(infobox_animes) == "tv"], style = css_infobox))
-      output$tv_time <- renderUI(tags$p(gsub("(.*)M.*", "\\1M", seconds_to_period(infobox_animes$time[rownames(infobox_animes) == 'tv'])), style = css_infobox))
-      
-      output$ova_cmpl <- renderUI(tags$p(infobox_animes$completed[rownames(infobox_animes) == "ova"], style = css_infobox))
-      output$ova_cw <- renderUI(tags$p(infobox_animes$watching[rownames(infobox_animes) == "ova"], style = css_infobox))
-      output$ova_ptw <- renderUI(tags$p(sum(infobox_animes$plan_to_watch[rownames(infobox_animes) == "ova"], na.rm = T), style = css_infobox))
-      output$ova_hld <- renderUI(tags$p(sum(infobox_animes$on_hold[rownames(infobox_animes) == "ova"], na.rm = T), style = css_infobox))
-      output$ova_eps <- renderUI(tags$p(infobox_animes$eps[rownames(infobox_animes) == "ova"], style = css_infobox))
-      output$ova_time <- renderUI(tags$p(gsub("(.*)M.*", "\\1M", seconds_to_period(infobox_animes$time[rownames(infobox_animes) == 'ova'])), style = css_infobox))
-      
-      output$ona_cmpl <- renderUI(tags$p(infobox_animes$completed[rownames(infobox_animes) == "ona"], style = css_infobox))
-      output$ona_cw <- renderUI(tags$p(infobox_animes$watching[rownames(infobox_animes) == "ona"], style = css_infobox))
-      output$ona_ptw <- renderUI(tags$p(sum(infobox_animes$plan_to_watch[rownames(infobox_animes) == "ona"], na.rm = T), style = css_infobox))
-      output$ona_hld <- renderUI(tags$p(sum(infobox_animes$on_hold[rownames(infobox_animes) == "ona"], na.rm = T), style = css_infobox))
-      output$ona_eps <- renderUI(tags$p(infobox_animes$eps[rownames(infobox_animes) == "ona"], style = css_infobox))
-      output$ona_time <- renderUI(tags$p(gsub("(.*)M.*", "\\1M", seconds_to_period(infobox_animes$time[rownames(infobox_animes) == 'ona'])), style = css_infobox))
-      
-      output$special_cmpl <- renderUI(tags$p(infobox_animes$completed[rownames(infobox_animes) == "special"], style = css_infobox))
-      output$special_cw <- renderUI(tags$p(infobox_animes$watching[rownames(infobox_animes) == "special"], style = css_infobox))
-      output$special_ptw <- renderUI(tags$p(sum(infobox_animes$plan_to_watch[rownames(infobox_animes) == "special"], na.rm = T), style = css_infobox))
-      output$special_hld <- renderUI(tags$p(sum(infobox_animes$on_hold[rownames(infobox_animes) == "special"], na.rm = T), style = css_infobox))
-      output$special_eps <- renderUI(tags$p(infobox_animes$eps[rownames(infobox_animes) == "special"], style = css_infobox))
-      output$special_time <- renderUI(tags$p(gsub("(.*)M.*", "\\1M", seconds_to_period(infobox_animes$time[rownames(infobox_animes) == 'special'])), style = css_infobox))
       
       #### Number of animes per season ####
-      
+
       df_season <- data.frame(title = character(length(list_of_animes)),
                               type = character(length(list_of_animes)),
                               year = numeric(length(list_of_animes)),
                               season = numeric(length(list_of_animes)),
-                              score = numeric(length(list_of_animes)))
-      
+                              score = numeric(length(list_of_animes)),
+                              studio = character(length(list_of_animes)))
+
       for (i in 1:length(list_of_animes)) {
         if (list_of_animes[[i]]$list_status$status == "completed") {
           df_season$title[i] <- list_of_animes[[i]]$node$title
@@ -101,14 +74,19 @@ function(input, output, session) {
           df_season$year[i] <- list_of_animes[[i]]$node$start_season$year
           df_season$season[i] <- list_of_animes[[i]]$node$start_season$season
           df_season$score[i] <- list_of_animes[[i]]$list_status$score
+          studio <- character()
+          for (j in 1:length(list_of_animes[[i]]$node$studios)) {
+            studio <- c(studio, list_of_animes[[i]]$node$studios[[j]]$name)
+          }
+          df_season$studio[i] <- paste(studio, collapse = "|")
         }
       }
-      df_season <- df_season[df_season$season != 0, ]
-      
+      df_season <- df_season[df_season$season != 0, ] ## Dirty method to remove unfinished animes
+
       table_season <- as.data.frame(with(df_season, table(type, year, season)))
       table_season$year <- as.numeric(as.character(table_season$year))
       table_season$season <- factor(table_season$season, levels = c("winter", "spring", "summer", "fall"))
-      
+
       output$seasonplot <- renderPlot({
         ggplot(table_season) +
           geom_col(aes(x = year, y = Freq, fill = season)) +
@@ -118,23 +96,41 @@ function(input, output, session) {
           scale_y_continuous(limits = c(0, max(tapply(table_season$Freq, table_season$year, sum)))) +
           labs(x = element_blank(), y = element_blank(), fill = element_blank()) +
           ggtitle("Number of animes watched per season of first diffusion") +
-          theme_minimal(base_family = "Avenir Next LT Pro", base_size = 12)
+          theme_minimal(base_family = font_plot, base_size = 12) +
+          theme(legend.position = "bottom")
       }, res = 96)
-      
-      
+
+
       #### Number of animes per personal score ####
-      
+
       table_score <- as.data.frame(with(df_season, table(score)))
       table_score$score <- as.numeric(as.character(table_score$score))
-      
+
       output$scoreplot <- renderPlot({
         ggplot(table_score) +
           geom_col(aes(x = score, y = Freq), fill = "darkolivegreen4") +
           scale_x_continuous(breaks = 1:10, limits = c(.5, 10.5)) +
           labs(x = element_blank(), y = element_blank()) +
           ggtitle("Number of animes watched per personal score") +
-          theme_minimal(base_family = "Avenir Next LT Pro", base_size = 12)
+          theme_minimal(base_family = font_plot, base_size = 12)
       }, res = 96)
+      
+      #### Number of animes per studio ####
+        
+      table_studio <- as.data.frame(table(strsplit(paste(df_season$studio, collapse = "|"), "\\|")))
+      table_studio$Var1 <- factor(table_studio$Var1, levels = table_studio$Var1[order(table_studio$Freq)])
+      table_studio <- table_studio[order(table_studio$Freq, decreasing = T), ]
+      table_studio <- table_studio[1:(min(10, nrow(table_studio))), ]
+      
+      output$studioplot <- renderPlot({
+        ggplot(table_studio) +
+          geom_col(aes(x = Freq, y = Var1), fill = "darkolivegreen4") +
+          # scale_x_continuous(breaks = 1:10, limits = c(.5, 10.5)) +
+          labs(x = element_blank(), y = element_blank()) +
+          ggtitle("Number of animes watched per studio") +
+          theme_minimal(base_family = font_plot, base_size = 12)
+      }, res = 96)
+      
     } else {
       showNotification("User not found!", type = "error")
     }
