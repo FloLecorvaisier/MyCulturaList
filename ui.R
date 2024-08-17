@@ -6,7 +6,7 @@ library(jsonlite)
 library(ggplot2)
 library(lubridate)
 library(extrafont)
-loadfonts()
+loadfonts(quiet = T)
 
 infobox_meta <- data.frame(val = c("completed", "watching", "plan_to_watch", "on_hold", "time", "eps"),
                            title = c("Complete", "Currently watching", "Plan to watch", "On hold", "Time", "Episodes"),

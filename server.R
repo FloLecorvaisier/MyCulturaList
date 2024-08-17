@@ -1,20 +1,20 @@
-output = list(); input = list(); input$user_mal = "ScienceLeaf"
+output = list(); input = list(); input$user_mal = "ScienceLea"
 
 css_infobox <- "font-size: 16px; font-family: Aleo"
 
-
-
 function(input, output) {
+
+  KEY <- readLines("MAL-KEY", warn = F)
   
   font_plot <- "Aleo"
-  
+
   #### Loading data using the API ####
   
   observeEvent(input$load_user, {
     GET(paste0("https://api.myanimelist.net/v2/users/",
                input$user_mal,
                "/animelist?fields=list_status,start_season,studios,media_type,mean,genres,average_episode_duration,num_times_rewatched&limit=1000&nsfw=true"),
-        add_headers("X-MAL-CLIENT-ID" = "e715766d230d70906370ecc2e581af17")) -> x
+        add_headers("X-MAL-CLIENT-ID" = KEY)) -> x
 
     xx <- fromJSON(content(x, "text"), simplifyVector = FALSE)
     if (object.size(xx) > 1024) { ## To check that the user name exists
@@ -130,8 +130,9 @@ function(input, output) {
           ggtitle("Number of animes watched per studio") +
           theme_minimal(base_family = font_plot, base_size = 12)
       }, res = 96)
-      
-    } else {
+    } else if (xx$error == "bad_request") {
+      showNotification("Invalid cliend ID!", type = "error")
+    } else if (xx$error == "not_found") {
       showNotification("User not found!", type = "error")
     }
   })
