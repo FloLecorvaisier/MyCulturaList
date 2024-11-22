@@ -1,13 +1,14 @@
-output = list(); input = list(); input$user_mal = "ScienceLea"
+output = list(); input = list(); input$user_mal = "ScienceLeaf"
+# input$listType =  c("movie", "ona", "ova", "tv", "special")
 
 css_infobox <- "font-size: 16px; font-family: Aleo"
 
 function(input, output) {
-
+  
   KEY <- readLines("MAL-KEY", warn = F)
   
   font_plot <- "Aleo"
-
+  
   #### Loading data using the API ####
   
   observeEvent(input$load_user, {
@@ -88,12 +89,12 @@ function(input, output) {
       table_season$season <- factor(table_season$season, levels = c("winter", "spring", "summer", "fall"))
 
       output$seasonplot <- renderPlot({
-        ggplot(table_season) +
+        ggplot(table_season[table_season$type %in% input$listType, ]) +
           geom_col(aes(x = year, y = Freq, fill = season)) +
           scale_fill_manual(values = c("lightblue1", "olivedrab2", "orangered1", "brown"),
                             labels = c("Winter", "Spring", "Summer", "Fall")) +
-          scale_x_continuous(limits = c(min(df_season$year) - 1, max(df_season$year) + 1)) +
-          scale_y_continuous(limits = c(0, max(tapply(table_season$Freq, table_season$year, sum)))) +
+          scale_x_continuous(limits = c(min(df_season$year) - 1, max(df_season$year) + 1), breaks = seq(1960, 2020, 10)) +
+          scale_y_continuous(limits = c(0, max(tapply(table_season$Freq, table_season$year, sum))), breaks = seq(0, 50, 5)) +
           labs(x = element_blank(), y = element_blank(), fill = element_blank()) +
           ggtitle("Number of animes watched per season of first diffusion") +
           theme_minimal(base_family = font_plot, base_size = 12) +
@@ -103,11 +104,11 @@ function(input, output) {
 
       #### Number of animes per personal score ####
 
-      table_score <- as.data.frame(with(df_season, table(score)))
+      table_score <- as.data.frame(with(df_season, table(type, score)))
       table_score$score <- as.numeric(as.character(table_score$score))
 
       output$scoreplot <- renderPlot({
-        ggplot(table_score) +
+        ggplot(table_score[table_score$type %in% input$listType, ]) +
           geom_col(aes(x = score, y = Freq), fill = "darkolivegreen4") +
           scale_x_continuous(breaks = 1:10, limits = c(.5, 10.5)) +
           labs(x = element_blank(), y = element_blank()) +
@@ -117,14 +118,24 @@ function(input, output) {
       
       #### Number of animes per studio ####
         
-      table_studio <- as.data.frame(table(strsplit(paste(df_season$studio, collapse = "|"), "\\|")))
-      table_studio$Var1 <- factor(table_studio$Var1, levels = table_studio$Var1[order(table_studio$Freq)])
-      table_studio <- table_studio[order(table_studio$Freq, decreasing = T), ]
-      table_studio <- table_studio[1:(min(10, nrow(table_studio))), ]
+      df_studio <- data.frame("studio" = unlist(strsplit(paste(df_season$studio, collapse = "|"), "\\|")))
+      df_studio$title <- rep(df_season$title, times = lengths(regmatches(df_season$studio, gregexpr("\\|", df_season$studio))) + 1) ## To add the type for each
+      df_studio$type <- rep(df_season$type, times = lengths(regmatches(df_season$studio, gregexpr("\\|", df_season$studio))) + 1) ## To add the type for each
+      
+      table_studio <- as.data.frame(with(df_studio, table(type, studio)))
+      
+      # input$listType <- c("tv")
+      # input$listType <- c("movie")
+      
+      ## For now changing studios to print does not work because "observeEvent"is dependent on the previous one, i.e. it only updates when new user is added
+      studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType, ],
+                                            tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
+      
       
       output$studioplot <- renderPlot({
-        ggplot(table_studio) +
-          geom_col(aes(x = Freq, y = Var1), fill = "darkolivegreen4") +
+        ggplot(table_studio[table_studio$type %in% input$listType 
+                            & table_studio$studio %in% studios_to_print, ]) +
+          geom_col(aes(x = Freq , y = factor(studio, levels = rev(studios_to_print))), fill = "darkolivegreen4") +
           # scale_x_continuous(breaks = 1:10, limits = c(.5, 10.5)) +
           labs(x = element_blank(), y = element_blank()) +
           ggtitle("Number of animes watched per studio") +
@@ -135,5 +146,59 @@ function(input, output) {
     } else if (xx$error == "not_found") {
       showNotification("User not found!", type = "error")
     }
-  })
+    
+    #### Lists to complete ####
+    
+    ## The file containing the lists that can be finished
+    lists <- read.table("lists.txt", sep = "\t")
+    colnames(lists) <- c("list", "id")
+    
+    ## GETting the data for the elements of the lists.txt file
+    for (id in unique(lists$id)) { 
+      getid <- GET(paste0("https://api.myanimelist.net/v2/anime/", id, "?fields=title,main_picture"),
+                   add_headers("X-MAL-CLIENT-ID" = KEY))
+      dataid <- fromJSON(content(getid, "text"), simplifyVector = FALSE)
+      lists$title[lists$id == id] <- dataid$title
+      lists$picture[lists$id == id] <- dataid$main_picture$medium
+      lists$watched[lists$id == id] <- ifelse(dataid$title %in% df_season$title, T, F)
+    }
+    
+    ## Reactive values that will contain the images URLs
+    image_urls_watched <- reactiveVal(NULL)
+    image_urls_not_watched <- reactiveVal(NULL)
+    
+    # input$selectList = "Prout"
+    
+    observeEvent(input$selectList, {
+      updateProgressBar(
+        id = "pBlists",
+        value = nrow(lists[lists$title %in% df_season$title & 
+                             lists$list == input$selectList, ]) /
+          nrow(lists[lists$list == input$selectList, ]) * 100
+      )
+      
+      lists_select <- lists[lists$list == input$selectList, ][order(lists$title[lists$list == input$selectList]), ]
+      new_urls_watched <- lists_select$picture[lists_select$watched == T]
+      new_urls_not_watched <- lists_select$picture[lists_select$watched == F]
+      
+      image_urls_watched(new_urls_watched)
+      image_urls_not_watched(new_urls_not_watched)
+      
+      output$image_gallery_watched <- renderUI({
+        div(class = "image-container",
+            lapply(image_urls_watched(), function(url) {
+              tags$img(src = url, alt = "Image dynamique", class = "image-item")
+            })
+        )
+      })
+      output$image_gallery_not_watched <- renderUI({
+        div(class = "image-container",
+            lapply(image_urls_not_watched(), function(url) {
+              tags$img(src = url, alt = "Image dynamique", class = "image-item")
+            })
+        )
+      })
+      
+    })
+  }) ## End of the main observeEvent
 }
