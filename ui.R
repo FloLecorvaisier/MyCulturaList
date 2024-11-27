@@ -81,8 +81,8 @@ ui <- dashboardPage(
                       flex-wrap: wrap;
                     }
                     .image-container img {
-                      max-width: 180px;
-                      height: auto;
+                      width: 180px;
+                      height: 255px;
                     }
                   ")
                 ),

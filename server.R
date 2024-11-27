@@ -124,9 +124,6 @@ function(input, output) {
       
       table_studio <- as.data.frame(with(df_studio, table(type, studio)))
       
-      # input$listType <- c("tv")
-      # input$listType <- c("movie")
-      
       ## For now changing studios to print does not work because "observeEvent"is dependent on the previous one, i.e. it only updates when new user is added
       studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType, ],
                                             tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
@@ -161,13 +158,12 @@ function(input, output) {
       lists$title[lists$id == id] <- dataid$title
       lists$picture[lists$id == id] <- dataid$main_picture$medium
       lists$watched[lists$id == id] <- ifelse(dataid$title %in% df_season$title, T, F)
+      lists$link[lists$id == id] <- paste0("https://myanimelist.net/anime/", id)
     }
     
-    ## Reactive values that will contain the images URLs
-    image_urls_watched <- reactiveVal(NULL)
-    image_urls_not_watched <- reactiveVal(NULL)
-    
-    # input$selectList = "Prout"
+    ## Reactive values that will contain the images URLs and links to MAL
+    list_watched <- reactiveVal(data.frame(img = NULL, link = NULL))
+    list_not_watched <- reactiveVal(data.frame(img = NULL, link = NULL))
     
     observeEvent(input$selectList, {
       updateProgressBar(
@@ -178,23 +174,33 @@ function(input, output) {
       )
       
       lists_select <- lists[lists$list == input$selectList, ][order(lists$title[lists$list == input$selectList]), ]
-      new_urls_watched <- lists_select$picture[lists_select$watched == T]
-      new_urls_not_watched <- lists_select$picture[lists_select$watched == F]
+      updt_watched <- data.frame(img = lists_select$picture[lists_select$watched == T],
+                                 link = lists_select$link[lists_select$watched == T])
+      updt_not_watched <- data.frame(img = lists_select$picture[lists_select$watched == F],
+                                     link = lists_select$link[lists_select$watched == F])
       
-      image_urls_watched(new_urls_watched)
-      image_urls_not_watched(new_urls_not_watched)
+      list_watched(updt_watched)
+      list_not_watched(updt_not_watched)
       
       output$image_gallery_watched <- renderUI({
         div(class = "image-container",
-            lapply(image_urls_watched(), function(url) {
-              tags$img(src = url, alt = "Image dynamique", class = "image-item")
+            lapply(1:nrow(list_watched()), function(i) {
+              tags$a(
+                href = list_watched()$link[i], # URL du lien
+                target = "_blank",
+                tags$img(src = list_watched()$img[i], alt = "Image dynamique", class = "image-item")
+              )
             })
         )
       })
       output$image_gallery_not_watched <- renderUI({
         div(class = "image-container",
-            lapply(image_urls_not_watched(), function(url) {
-              tags$img(src = url, alt = "Image dynamique", class = "image-item")
+            lapply(1:nrow(list_not_watched()), function(i) {
+              tags$a(
+                href = list_not_watched()$link[i], # URL du lien
+                target = "_blank",
+                tags$img(src = list_not_watched()$img[i], alt = "Image dynamique", class = "image-item")
+              )
             })
         )
       })
