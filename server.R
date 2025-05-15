@@ -1,7 +1,11 @@
 output = list(); input = list(); input$user_mal = "ScienceLeaf"
 # input$listType =  c("movie", "ona", "ova", "tv", "special")
+# input$selectList = "Satoshi Kon full length movies"
 
 css_infobox <- "font-size: 16px; font-family: Aleo"
+
+## Will contain multiple reactive values too complex for reactiveVal()
+reacVals <- reactiveValues()
 
 function(input, output) {
   
@@ -18,7 +22,7 @@ function(input, output) {
         add_headers("X-MAL-CLIENT-ID" = KEY)) -> x
 
     xx <- fromJSON(content(x, "text"), simplifyVector = FALSE)
-    if (object.size(xx) > 1024) { ## To check that the user name exists
+    if (object.size(xx$data) > 1024) { ## To check that the user name exists
       list_of_animes <- xx$data
 
       #### Infoboxes ####
@@ -138,73 +142,76 @@ function(input, output) {
           ggtitle("Number of animes watched per studio") +
           theme_minimal(base_family = font_plot, base_size = 12)
       }, res = 96)
+      
+      
+      #### Lists to complete ####
+      
+      ## The file containing the lists that can be finished
+      reacVals$lists <- read.table("lists.txt", sep = "\t")
+      colnames(reacVals$lists) <- c("list", "id")
+      reacVals$lists$title <- reacVals$lists$picture <- reacVals$lists$watched <- reacVals$lists$link <- NA
+      
+      observeEvent(input$selectList, {
+        ## GETting the data for the elements of the lists.txt file
+        for (id in unique(reacVals$lists$id[reacVals$lists$list == input$selectList])) {
+          if (is.na(reacVals$lists$title[reacVals$lists$id == id])[1]) {
+            getid <- GET(paste0("https://api.myanimelist.net/v2/anime/", id, "?fields=title,main_picture"),
+                         add_headers("X-MAL-CLIENT-ID" = KEY))
+            dataid <- fromJSON(content(getid, "text"), simplifyVector = FALSE)
+            reacVals$lists$title[reacVals$lists$id == id] <- dataid$title
+            reacVals$lists$picture[reacVals$lists$id == id] <- dataid$main_picture$medium
+            reacVals$lists$watched[reacVals$lists$id == id] <- ifelse(dataid$title %in% df_season$title, T, F)
+            reacVals$lists$link[reacVals$lists$id == id] <- paste0("https://myanimelist.net/anime/", id)
+          }
+        }
+        
+        ## Reactive values that will contain the images URLs and links to MAL
+        list_watched <- reactiveVal(data.frame(img = NULL, link = NULL))
+        list_not_watched <- reactiveVal(data.frame(img = NULL, link = NULL))
+        
+        updateProgressBar(
+          id = "pBlists",
+          value = nrow(reacVals$lists[reacVals$lists$title %in% df_season$title & 
+                                        reacVals$lists$list == input$selectList, ]) /
+            nrow(reacVals$lists[reacVals$lists$list == input$selectList, ]) * 100
+        )
+        
+        lists_select <- reacVals$lists[reacVals$lists$list == input$selectList, ][order(reacVals$lists$title[reacVals$lists$list == input$selectList]), ]
+        updt_watched <- data.frame(img = lists_select$picture[lists_select$watched == T],
+                                   link = lists_select$link[lists_select$watched == T])
+        updt_not_watched <- data.frame(img = lists_select$picture[lists_select$watched == F],
+                                       link = lists_select$link[lists_select$watched == F])
+        
+        list_watched(updt_watched)
+        list_not_watched(updt_not_watched)
+        
+        output$image_gallery_watched <- renderUI({
+          div(class = "image-container",
+              lapply(1:nrow(list_watched()), function(i) {
+                tags$a(
+                  href = list_watched()$link[i], # URL du lien
+                  target = "_blank",
+                  tags$img(src = list_watched()$img[i], alt = "Image dynamique", class = "image-item")
+                )
+              })
+          )
+        })
+        output$image_gallery_not_watched <- renderUI({
+          div(class = "image-container",
+              lapply(1:nrow(list_not_watched()), function(i) {
+                tags$a(
+                  href = list_not_watched()$link[i], # URL du lien
+                  target = "_blank",
+                  tags$img(src = list_not_watched()$img[i], alt = "Image dynamique", class = "image-item")
+                )
+              })
+          )
+        })
+      })
     } else if (xx$error == "bad_request") {
       showNotification("Invalid cliend ID!", type = "error")
     } else if (xx$error == "not_found") {
       showNotification("User not found!", type = "error")
     }
-    
-    #### Lists to complete ####
-    
-    ## The file containing the lists that can be finished
-    lists <- read.table("lists.txt", sep = "\t")
-    colnames(lists) <- c("list", "id")
-    
-    ## GETting the data for the elements of the lists.txt file
-    for (id in unique(lists$id)) { 
-      getid <- GET(paste0("https://api.myanimelist.net/v2/anime/", id, "?fields=title,main_picture"),
-                   add_headers("X-MAL-CLIENT-ID" = KEY))
-      dataid <- fromJSON(content(getid, "text"), simplifyVector = FALSE)
-      lists$title[lists$id == id] <- dataid$title
-      lists$picture[lists$id == id] <- dataid$main_picture$medium
-      lists$watched[lists$id == id] <- ifelse(dataid$title %in% df_season$title, T, F)
-      lists$link[lists$id == id] <- paste0("https://myanimelist.net/anime/", id)
-    }
-    
-    ## Reactive values that will contain the images URLs and links to MAL
-    list_watched <- reactiveVal(data.frame(img = NULL, link = NULL))
-    list_not_watched <- reactiveVal(data.frame(img = NULL, link = NULL))
-    
-    observeEvent(input$selectList, {
-      updateProgressBar(
-        id = "pBlists",
-        value = nrow(lists[lists$title %in% df_season$title & 
-                             lists$list == input$selectList, ]) /
-          nrow(lists[lists$list == input$selectList, ]) * 100
-      )
-      
-      lists_select <- lists[lists$list == input$selectList, ][order(lists$title[lists$list == input$selectList]), ]
-      updt_watched <- data.frame(img = lists_select$picture[lists_select$watched == T],
-                                 link = lists_select$link[lists_select$watched == T])
-      updt_not_watched <- data.frame(img = lists_select$picture[lists_select$watched == F],
-                                     link = lists_select$link[lists_select$watched == F])
-      
-      list_watched(updt_watched)
-      list_not_watched(updt_not_watched)
-      
-      output$image_gallery_watched <- renderUI({
-        div(class = "image-container",
-            lapply(1:nrow(list_watched()), function(i) {
-              tags$a(
-                href = list_watched()$link[i], # URL du lien
-                target = "_blank",
-                tags$img(src = list_watched()$img[i], alt = "Image dynamique", class = "image-item")
-              )
-            })
-        )
-      })
-      output$image_gallery_not_watched <- renderUI({
-        div(class = "image-container",
-            lapply(1:nrow(list_not_watched()), function(i) {
-              tags$a(
-                href = list_not_watched()$link[i], # URL du lien
-                target = "_blank",
-                tags$img(src = list_not_watched()$img[i], alt = "Image dynamique", class = "image-item")
-              )
-            })
-        )
-      })
-      
-    })
   }) ## End of the main observeEvent
 }

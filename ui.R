@@ -87,9 +87,9 @@ ui <- dashboardPage(
                   ")
                 ),
                 h2("Watched", style = "font-family: Aleo"),
-                uiOutput("image_gallery_watched"), 
+                uiOutput("image_gallery_watched"),
                 h2("Not watched", style = "font-family: Aleo"),
-                uiOutput("image_gallery_not_watched") 
+                uiOutput("image_gallery_not_watched")
               )
       ) ## End of the tabItem()
     ) ## End of the tabItems()
