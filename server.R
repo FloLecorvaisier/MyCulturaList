@@ -84,6 +84,11 @@ function(input, output) {
             studio <- c(studio, list_of_animes[[i]]$node$studios[[j]]$name)
           }
           df_season$studio[i] <- paste(studio, collapse = "|")
+          genre <- character()
+          for (j in 1:length(list_of_animes[[i]]$node$genres)) {
+            genre <- c(genre, list_of_animes[[i]]$node$genres[[j]]$name)
+          }
+          df_season$genre[i] <- paste(genre, collapse = "|")
         }
       }
       df_season <- df_season[df_season$season != 0, ] ## Dirty method to remove unfinished animes
@@ -123,7 +128,7 @@ function(input, output) {
       #### Number of animes per studio ####
         
       df_studio <- data.frame("studio" = unlist(strsplit(paste(df_season$studio, collapse = "|"), "\\|")))
-      df_studio$title <- rep(df_season$title, times = lengths(regmatches(df_season$studio, gregexpr("\\|", df_season$studio))) + 1) ## To add the type for each
+      df_studio$title <- rep(df_season$title, times = lengths(regmatches(df_season$studio, gregexpr("\\|", df_season$studio))) + 1) ## To add the title for each
       df_studio$type <- rep(df_season$type, times = lengths(regmatches(df_season$studio, gregexpr("\\|", df_season$studio))) + 1) ## To add the type for each
       
       table_studio <- as.data.frame(with(df_studio, table(type, studio)))
@@ -131,7 +136,6 @@ function(input, output) {
       ## For now changing studios to print does not work because "observeEvent"is dependent on the previous one, i.e. it only updates when new user is added
       studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType, ],
                                             tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
-      
       
       output$studioplot <- renderPlot({
         ggplot(table_studio[table_studio$type %in% input$listType 
@@ -143,6 +147,32 @@ function(input, output) {
           theme_minimal(base_family = font_plot, base_size = 12)
       }, res = 96)
       
+      #### Number of animes per genre ####
+      
+      df_genre <- data.frame("genre" = unlist(strsplit(paste(df_season$genre, collapse = "|"), "\\|")))
+      df_genre$title <- rep(df_season$title, times = lengths(regmatches(df_season$genre, gregexpr("\\|", df_season$genre))) + 1) ## To add the title for each
+      df_genre$type <- rep(df_season$type, times = lengths(regmatches(df_season$genre, gregexpr("\\|", df_season$genre))) + 1) ## To add the type for each
+      
+      ## Only keeping the "Genres" tags from MAL
+      df_genre_genres <- df_genre[df_genre$genre %in% c("Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love",
+                                                        "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", 
+                                                        "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life",
+                                                        "Sports", "Supernatural", "Suspense"), ]
+      
+      table_genres <- as.data.frame(with(df_genre_genres, table(type, genre)))
+      
+      genres_to_print <- names(sort(with(table_genres[table_genres$type %in% input$listType, ],
+                                          tapply(Freq, genre, sum)), decreasing = T))[1:min(10, length(unique(df_genre_genres$genre)))]
+      
+      output$genresplot <- renderPlot({
+        ggplot(table_genres[table_genres$type %in% input$listType 
+                            & table_genres$genre %in% genres_to_print, ]) +
+          geom_col(aes(x = Freq , y = factor(genre, levels = rev(genres_to_print))), fill = "darkolivegreen4") +
+          # scale_x_continuous(breaks = 1:10, limits = c(.5, 10.5)) +
+          labs(x = element_blank(), y = element_blank()) +
+          ggtitle("Number of animes watched per genre") +
+          theme_minimal(base_family = font_plot, base_size = 12)
+      }, res = 96)
       
       #### Lists to complete ####
       

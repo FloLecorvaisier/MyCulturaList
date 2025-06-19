@@ -64,7 +64,8 @@ ui <- dashboardPage(
                 box(plotOutput("scoreplot"))
               ),
               fluidRow(
-                box(plotOutput("studioplot"))
+                box(plotOutput("studioplot")),
+                box(plotOutput("genresplot"))
               ),
               
               ### Lists of animes ####
