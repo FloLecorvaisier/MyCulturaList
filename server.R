@@ -1,5 +1,6 @@
 output = list(); input = list(); input$user_mal = "ScienceLeaf"
 # input$listType =  c("movie", "ona", "ova", "tv", "special")
+# input$listYear = c(1917, 2025)
 # input$selectList = "Satoshi Kon full length movies"
 
 css_infobox <- "font-size: 16px; font-family: Aleo"
@@ -211,6 +212,7 @@ function(input, output, session) {
       df_studio$title <- rep(df_all$title, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the title for each
       df_studio$type <- rep(df_all$type, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the type for each
       df_studio$year <- rep(df_all$year, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the year for each
+      df_studio$score <- rep(df_all$score, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the year for each
       
       table_studio <- as.data.frame(with(df_studio, table(type, year, studio)))
       
@@ -263,6 +265,22 @@ function(input, output, session) {
           geom_col_interactive(aes(x = Freq , y = factor(genre, levels = rev(genres_to_print)), tooltip = Freq, data_id = genre), fill = "darkolivegreen4") +
           labs(x = element_blank(), y = element_blank()) +
           ggtitle("Number of animes watched per genre") +
+          theme_minimal(base_family = font_plot, base_size = 12) +
+          theme()
+        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+      })
+      
+      #### Score per studio ####
+      
+      output$score_studio_plot <- renderGirafe({
+        gg <- ggplot(df_studio[df_studio$type %in% input$listType
+                               & df_studio$year %in% min(input$listYear):max(input$listYear)
+                               & df_studio$studio %in% studios_to_print, ]) +
+          geom_boxplot_interactive(aes(x = score, y = factor(studio, levels = rev(studios_to_print))), fill = "darkolivegreen4") +
+          labs(x = element_blank(), y = element_blank()) +
+          ggtitle("Score per studio") +
+          scale_x_continuous(breaks = 1:10) +
+          coord_cartesian(xlim = c(1, 10)) +
           theme_minimal(base_family = font_plot, base_size = 12) +
           theme()
         gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
