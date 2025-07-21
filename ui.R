@@ -50,7 +50,11 @@ ui <- dashboardPage(
                                        "TV Specials" = "tv_special", "CMs" = "cm", "PVs" = "pv", "Musics" = "music", "Unknown" = "unknown"), 
                                      selected = c("tv", "movie", "ona", "ova", "special", "tv_special")),
                 ),
-                do.call(tabBox, c(id = "valueBox", height = "310px", lapply(infobox_meta2$type, function(i) {
+                box(width = 3,
+                    sliderInput("listYear", "Year(s) to show", 1917, year(today()), value = c(1917, year(today())), dragRange = T, sep = ""))
+              ),
+              fluidRow(
+                do.call(tabBox, c(id = "valueBox", height = "310px", width = 12, lapply(infobox_meta2$type, function(i) {
                   tabPanel(
                     infobox_meta2$title[infobox_meta2$type == i],
                     lapply(infobox_meta$val, function(x) {
@@ -62,7 +66,7 @@ ui <- dashboardPage(
                         fill = TRUE)
                     })
                   )
-                }))),
+                })))
               ),
               fluidRow(
                 box(girafeOutput("season_plot", height = "100%")),

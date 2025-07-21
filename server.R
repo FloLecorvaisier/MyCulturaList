@@ -105,7 +105,8 @@ function(input, output, session) {
       table_season$season <- factor(table_season$season, levels = c("winter", "spring", "summer", "fall"))
 
       output$season_plot <- renderGirafe({
-        tb_season_filtered <- table_season[table_season$type %in% input$listType, ] |> 
+        tb_season_filtered <- table_season[table_season$type %in% input$listType
+                                           &table_season$year %in% min(input$listYear):max(input$listYear), ] |> 
           group_by(season, year) |>
           summarise(Freq = sum(Freq))
         gg <- ggplot(tb_season_filtered) +
@@ -158,19 +159,23 @@ function(input, output, session) {
         }
         if (reacVals$clicked == "season") {
           out <- df_all$title[paste0(df_all$season, df_all$year) %in% input$season_plot_selected
-                              & df_all$type %in% input$listType]
+                              & df_all$type %in% input$listType
+                              & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "score") {
           out <- df_all$title[df_all$score %in% input$score_plot_selected
-                              & df_all$type %in% input$listType]
+                              & df_all$type %in% input$listType
+                              & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "studio") {
           out <- df_studio$title[df_studio$studio %in% input$studio_plot_selected
-                                 & df_studio$type %in% input$listType]
+                                 & df_studio$type %in% input$listType
+                                 & df_studio$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "genres") {
           out <- df_genre$title[df_genre$genre  %in% input$genres_plot_selected
-                                & df_genre$type %in% input$listType]
+                                & df_genre$type %in% input$listType
+                                & df_genre$year %in% min(input$listYear):max(input$listYear)]
         }
         out
       })
@@ -183,11 +188,12 @@ function(input, output, session) {
 
       #### Number of animes per personal score ####
 
-      table_score <- as.data.frame(with(df_all, table(type, score)))
+      table_score <- as.data.frame(with(df_all, table(type, year, score)))
       table_score$score <- as.numeric(as.character(table_score$score))
 
       output$score_plot <- renderGirafe({
-        tb_score_filtered <- table_score[table_score$type %in% input$listType, ] |> 
+        tb_score_filtered <- table_score[table_score$type %in% input$listType
+                                         & table_score$year %in% min(input$listYear):max(input$listYear), ] |> 
           group_by(score) |>
           summarise(Freq = sum(Freq))
         gg <- ggplot(tb_score_filtered) +
@@ -204,15 +210,18 @@ function(input, output, session) {
       df_studio <- data.frame("studio" = unlist(strsplit(paste(df_all$studio, collapse = "|"), "\\|")))
       df_studio$title <- rep(df_all$title, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the title for each
       df_studio$type <- rep(df_all$type, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the type for each
+      df_studio$year <- rep(df_all$year, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the year for each
       
-      table_studio <- as.data.frame(with(df_studio, table(type, studio)))
+      table_studio <- as.data.frame(with(df_studio, table(type, year, studio)))
       
       ## For now changing studios to print does not work because "observeEvent"is dependent on the previous one, i.e. it only updates when new user is added
-      studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType, ],
-                                            tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
+      studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType
+                                                       & table_studio$year %in% min(input$listYear):max(input$listYear), ],
+                                          tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
       
       output$studio_plot <- renderGirafe({
         tb_studio_filtered <- table_studio[table_studio$type %in% input$listType
+                                           & table_studio$year %in% min(input$listYear):max(input$listYear)
                                            & table_studio$studio %in% studios_to_print, ] |> 
           group_by(studio) |>
           summarise(Freq = sum(Freq))
@@ -230,20 +239,23 @@ function(input, output, session) {
       df_genre <- data.frame("genre" = unlist(strsplit(paste(df_all$genre, collapse = "|"), "\\|")))
       df_genre$title <- rep(df_all$title, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the title for each
       df_genre$type <- rep(df_all$type, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the type for each
-      
+      df_genre$year <- rep(df_all$year, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the year for each
+
       ## Only keeping the "Genres" tags from MAL
       df_genre_genres <- df_genre[df_genre$genre %in% c("Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love",
                                                         "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", 
                                                         "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life",
                                                         "Sports", "Supernatural", "Suspense"), ]
       
-      table_genres <- as.data.frame(with(df_genre_genres, table(type, genre)))
+      table_genres <- as.data.frame(with(df_genre_genres, table(type, year, genre)))
       
-      genres_to_print <- names(sort(with(table_genres[table_genres$type %in% input$listType, ],
-                                          tapply(Freq, genre, sum)), decreasing = T))[1:min(10, length(unique(df_genre_genres$genre)))]
+      genres_to_print <- names(sort(with(table_genres[table_genres$type %in% input$listType
+                                                      & table_genres$year %in% min(input$listYear):max(input$listYear), ],
+                                         tapply(Freq, genre, sum)), decreasing = T))[1:min(10, length(unique(df_genre_genres$genre)))]
       
       output$genres_plot <- renderGirafe({
         tb_genres_filtered <- table_genres[table_genres$type %in% input$listType
+                                           & table_genres$year %in% min(input$listYear):max(input$listYear)
                                            & table_genres$genre %in% genres_to_print, ] |> 
           group_by(genre) |>
           summarise(Freq = sum(Freq))
