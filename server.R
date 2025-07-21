@@ -242,6 +242,7 @@ function(input, output, session) {
       df_genre$title <- rep(df_all$title, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the title for each
       df_genre$type <- rep(df_all$type, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the type for each
       df_genre$year <- rep(df_all$year, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the year for each
+      df_genre$score <- rep(df_all$score, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the score for each
 
       ## Only keeping the "Genres" tags from MAL
       df_genre_genres <- df_genre[df_genre$genre %in% c("Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love",
@@ -279,6 +280,22 @@ function(input, output, session) {
           geom_boxplot_interactive(aes(x = score, y = factor(studio, levels = rev(studios_to_print))), fill = "darkolivegreen4") +
           labs(x = element_blank(), y = element_blank()) +
           ggtitle("Score per studio") +
+          scale_x_continuous(breaks = 1:10) +
+          coord_cartesian(xlim = c(1, 10)) +
+          theme_minimal(base_family = font_plot, base_size = 12) +
+          theme()
+        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+      })
+      
+      #### Score per genre ####
+      
+      output$score_genres_plot <- renderGirafe({
+        gg <- ggplot(df_genre[df_genre$type %in% input$listType
+                              & df_genre$year %in% min(input$listYear):max(input$listYear)
+                              & df_genre$genre %in% genres_to_print, ]) +
+          geom_boxplot_interactive(aes(x = score, y = factor(genre, levels = rev(genres_to_print))), fill = "darkolivegreen4") +
+          labs(x = element_blank(), y = element_blank()) +
+          ggtitle("Score per genre") +
           scale_x_continuous(breaks = 1:10) +
           coord_cartesian(xlim = c(1, 10)) +
           theme_minimal(base_family = font_plot, base_size = 12) +
