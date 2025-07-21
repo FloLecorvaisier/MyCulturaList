@@ -29,14 +29,14 @@ function(input, output, session) {
 
       #### Infoboxes ####
 
-      infobox_animes <- data.frame(completed = numeric(5),
-                                   watching = numeric(5),
-                                   plan_to_watch = numeric(5),
-                                   dropped = numeric(5),
-                                   on_hold = numeric(5),
-                                   eps = numeric(5),
-                                   time = numeric(5),
-                                   row.names = c("movie", "ona", "ova", "tv", "special"))
+      infobox_animes <- data.frame(completed = numeric(10),
+                                   watching = numeric(10),
+                                   plan_to_watch = numeric(10),
+                                   dropped = numeric(10),
+                                   on_hold = numeric(10),
+                                   eps = numeric(10),
+                                   time = numeric(10),
+                                   row.names = c("movie", "ona", "ova", "tv", "special", "tv_special", "cm", "pv", "music", "unknown"))
 
 
       for (anime in list_of_animes) {
@@ -50,17 +50,17 @@ function(input, output, session) {
           infobox_animes$time[rownames(infobox_animes) == anime$node$media_type] +
           anime$node$average_episode_duration * anime$list_status$num_episodes_watched
       }
-      infobox_animes <- infobox_animes[1:5, ] # Temporary, just because MAL added "tv_special" and "cm", which are not represented...
+      # infobox_animes <- infobox_animes[1:5, ] # Temporary, just because MAL added "tv_special" and "cm", which are not represented...
       infobox_animes <- rbind(infobox_animes, apply(infobox_animes, 2, sum))
-      rownames(infobox_animes)[6] <- "general"
+      rownames(infobox_animes)[11] <- "general"
       infobox_animes$time <- seconds_to_period(infobox_animes$time)
-      infobox_animes$type <- c("Movies", "ONAs", "OVAs", "TVs", "Specials", "General")
+      infobox_animes$type <- c("Movies", "ONAs", "OVAs", "TVs", "Specials", "TV specials", "CMs", "PVs", "Musics", "Unknown", "General")
 
       ## Rendering the values in the different infoboxes
-      ll <- levels(interaction(colnames(infobox_animes)[c(1:3, 5:7)], rownames(infobox_animes), sep = "|"))
+      ll <- levels(interaction(colnames(infobox_animes)[c(1:3, 5:7)], rownames(infobox_animes), sep = "|")) # Warning but working...
       lapply(ll, function(k) {
-        # output[[k]] <- renderText(infobox_animes[rownames(infobox_animes) == gsub(".*\\|(.*)", "\\1", k), colnames(infobox_animes) == gsub("(.*)\\|.*", "\\1", k)])
-        output[[k]] <- renderUI(tags$p(infobox_animes[rownames(infobox_animes) == gsub(".*\\|(.*)", "\\1", k), colnames(infobox_animes) == gsub("(.*)\\|.*", "\\1", k)], 
+        output[[k]] <- renderUI(tags$p(infobox_animes[rownames(infobox_animes) == gsub(".*\\|(.*)", "\\1", k), 
+                                                      colnames(infobox_animes) == gsub("(.*)\\|.*", "\\1", k)], 
                                 style = css_infobox))
       })
       
@@ -68,12 +68,12 @@ function(input, output, session) {
       #### Summary of the data ####
 
       df_all <- data.frame(title = character(length(list_of_animes)),
-                              type = character(length(list_of_animes)),
-                              year = numeric(length(list_of_animes)),
-                              season = numeric(length(list_of_animes)),
-                              score = numeric(length(list_of_animes)),
-                              studio = character(length(list_of_animes)),
-                              genre = character(length(list_of_animes)))
+                           type = character(length(list_of_animes)),
+                           year = numeric(length(list_of_animes)),
+                           season = numeric(length(list_of_animes)),
+                           score = numeric(length(list_of_animes)),
+                           studio = character(length(list_of_animes)),
+                           genre = character(length(list_of_animes)))
 
       for (i in 1:length(list_of_animes)) {
         if (list_of_animes[[i]]$list_status$status == "completed") {
@@ -95,6 +95,7 @@ function(input, output, session) {
         }
       }
       df_all <- df_all[df_all$season != 0, ] ## Dirty method to remove unfinished animes
+      # df_all$type[df_all$type == "tv_special"] <- "special"
 
       
       #### Number of animes per season ####

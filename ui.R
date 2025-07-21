@@ -14,9 +14,9 @@ loadfonts(quiet = T)
 infobox_meta <- data.frame(val = c("completed", "watching", "plan_to_watch", "on_hold", "time", "eps"),
                            title = c("Complete", "Currently watching", "Plan to watch", "On hold", "Time", "Episodes"),
                            icon = c("flag-checkered", "eye", "clipboard-list", "circle-pause", "clock", "display"))
-infobox_meta2 <- data.frame(title = c("General", "Movies", "TVs", "OVAs", "ONAs", "Specials"),
-                            type = c("general", "movie", "tv", "ova", "ona", "special"),
-                            color = c("aqua", "lime", "maroon", "orange", "navy", "olive"))
+infobox_meta2 <- data.frame(title = c("General", "Movies", "TVs", "OVAs", "ONAs", "Specials", "TV Specials", "CMs", "PVs", "Musics", "Unknown"),
+                            type = c("general", "movie", "tv", "ova", "ona", "special", "tv_special", "cm", "pv", "music", "unknown"),
+                            color = c("aqua", "lime", "maroon", "orange", "navy", "olive", "purple", "teal", "green", "fuchsia", "red"))
 
 ## The file containing the lists that can be finished
 lists <- read.table("lists.txt", sep = "\t")
@@ -46,10 +46,11 @@ ui <- dashboardPage(
                     actionButton("load_user", "Load user")),
                 box(width = 3,
                   checkboxGroupInput("listType", "Type(s) to show",
-                                     c("Movies" = "movie", "TVs" = "tv", "ONAs" = "ona", "OVAs" = "ova", "Specials" = "special"), 
-                                     selected = c("tv", "movie", "ona", "ova", "special")),
+                                     c("Movies" = "movie", "TVs" = "tv", "ONAs" = "ona", "OVAs" = "ova", "Specials" = "special",
+                                       "TV Specials" = "tv_special", "CMs" = "cm", "PVs" = "pv", "Musics" = "music", "Unknown" = "unknown"), 
+                                     selected = c("tv", "movie", "ona", "ova", "special", "tv_special")),
                 ),
-                do.call(tabBox, c(id = "valueBox", height = "260px", lapply(infobox_meta2$type, function(i) {
+                do.call(tabBox, c(id = "valueBox", height = "310px", lapply(infobox_meta2$type, function(i) {
                   tabPanel(
                     infobox_meta2$title[infobox_meta2$type == i],
                     lapply(infobox_meta$val, function(x) {
