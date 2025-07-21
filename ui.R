@@ -7,6 +7,8 @@ library(ggplot2)
 library(lubridate)
 library(extrafont)
 library(shinyWidgets)
+library(ggiraph)
+library(dplyr)
 loadfonts(quiet = T)
 
 infobox_meta <- data.frame(val = c("completed", "watching", "plan_to_watch", "on_hold", "time", "eps"),
@@ -23,6 +25,8 @@ colnames(lists) <- c("list", "id")
 image_urls <- NULL
 # image_urls <- c("https://cdn.myanimelist.net/images/anime/1136/100516.jpg", "https://cdn.myanimelist.net/images/anime/1791/100508.jpg")
 
+opts_sizing(rescale = T)
+
 ui <- dashboardPage(
   dashboardHeader(title = "MyCulturaList"),
   dashboardSidebar(
@@ -37,15 +41,15 @@ ui <- dashboardPage(
       tabItem(tabName = "mal",
               fluidRow(
                 box(width = 3, textInput("user_mal",
-                              label = "User",
-                              value = "ScienceLeaf"),
+                                         label = "User",
+                                         value = "ScienceLeaf"),
                     actionButton("load_user", "Load user")),
                 box(width = 3,
                   checkboxGroupInput("listType", "Type(s) to show",
                                      c("Movies" = "movie", "TVs" = "tv", "ONAs" = "ona", "OVAs" = "ova", "Specials" = "special"), 
                                      selected = c("tv", "movie", "ona", "ova", "special")),
                 ),
-                do.call(tabBox, c(id = "valueBox", height = "280px", lapply(infobox_meta2$type, function(i) {
+                do.call(tabBox, c(id = "valueBox", height = "260px", lapply(infobox_meta2$type, function(i) {
                   tabPanel(
                     infobox_meta2$title[infobox_meta2$type == i],
                     lapply(infobox_meta$val, function(x) {
@@ -60,15 +64,17 @@ ui <- dashboardPage(
                 }))),
               ),
               fluidRow(
-                box(plotOutput("seasonplot")),
-                box(plotOutput("scoreplot"))
+                box(girafeOutput("season_plot", height = "100%")),
+                box(h3("List of animes in the selection"),
+                    htmlOutput("list_of_animes"))
               ),
               fluidRow(
-                box(plotOutput("studioplot")),
-                box(plotOutput("genresplot"))
+                box(width = 4, girafeOutput("studio_plot", height = "100%")),
+                box(width = 4, girafeOutput("score_plot", height = "100%")),
+                box(width = 4, girafeOutput("genres_plot", height = "100%"))
               ),
               
-              ### Lists of animes ####
+              ### Lists to achieve ####
               
               h1("Lists of animes to complete", style = "font-family: Aleo"),
               selectInput("selectList", "Select a list", unique(lists$list), width = "600px"), 
