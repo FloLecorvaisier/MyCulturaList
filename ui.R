@@ -71,6 +71,7 @@ ui <- dashboardPage(
               fluidRow(
                 box(girafeOutput("season_plot", height = "100%")),
                 box(h3("List of animes in the selection"),
+                    style = "max-height: 610px; overflow-y: auto;", 
                     htmlOutput("list_of_animes"))
               ),
               fluidRow(
