@@ -9,6 +9,7 @@ library(extrafont)
 library(shinyWidgets)
 library(ggiraph)
 library(dplyr)
+
 loadfonts(quiet = T)
 
 infobox_meta <- data.frame(val = c("completed", "watching", "plan_to_watch", "on_hold", "time", "eps"),
@@ -75,7 +76,7 @@ ui <- dashboardPage(
                     htmlOutput("list_of_animes"))
               ),
               fluidRow(
-                box(width = 4, girafeOutput("studio_plot", height = "100%")),
+                box(width = 4, checkboxInput("switch_studio", "Polar coordinates"), girafeOutput("studio_plot", height = "100%")),
                 box(width = 4, girafeOutput("score_plot", height = "100%")),
                 box(width = 4, girafeOutput("genres_plot", height = "100%"))
               ),

@@ -227,12 +227,38 @@ function(input, output, session) {
                                            & table_studio$studio %in% studios_to_print, ] |> 
           group_by(studio) |>
           summarise(Freq = sum(Freq))
-        gg <- ggplot(tb_studio_filtered) +
-          geom_col_interactive(aes(x = Freq , y = factor(studio, levels = rev(studios_to_print)), tooltip = Freq, data_id = studio), fill = "darkolivegreen4") +
-          labs(x = element_blank(), y = element_blank()) +
-          ggtitle("Number of animes watched per studio") +
-          theme_minimal(base_family = font_plot, base_size = 12) +
-          theme()
+        tb_studio_filtered2 <- rbind(tb_studio_filtered, data.frame(studio = "", Freq = 0)) ## For polar coord version.
+        if (!input$switch_studio) {
+          gg <- ggplot(tb_studio_filtered) +
+            geom_col_interactive(aes(x = Freq , y = factor(studio, levels = rev(studios_to_print)), tooltip = Freq, data_id = studio), fill = "darkolivegreen4") +
+            labs(x = element_blank(), y = element_blank()) +
+            ggtitle("Number of animes watched per studio") +
+            theme_minimal(base_family = font_plot, base_size = 12) +
+            theme()
+        } else {
+          gg <- ggplot(tb_studio_filtered2) +
+            geom_hline(yintercept = seq(0, max(tb_studio_filtered$Freq), length.out = 5), color = "gray80") +
+            geom_segment(x = 1:nrow(tb_studio_filtered2), y = 0, yend = max(tb_studio_filtered$Freq), color = "gray80") +
+            geom_col_interactive(aes(y = Freq , x = factor(studio, levels = rev(c("", studios_to_print))), tooltip = Freq, data_id = studio), 
+                                 fill = "darkolivegreen4") +
+            annotate("label",
+                     x = 11,
+                     y = seq(0,max(tb_studio_filtered$Freq), length.out = 5),
+                     label = seq(0,max(tb_studio_filtered$Freq), length.out = 5),
+                     color = "gray30", label.size = 0) +
+            labs(x = element_blank(), y = element_blank()) +
+            ggtitle("Number of animes watched per studio") +
+            ylim(-5, max(tb_studio_filtered$Freq)) +
+            theme_minimal(base_family = font_plot, base_size = 12) +
+            coord_polar(start = pi / nrow(tb_studio_filtered2)) +
+            theme(axis.text.y = element_blank(),
+                  axis.text.x = element_text(hjust = 1, 
+                                             angle = seq(360 - 360 / nrow(tb_studio_filtered2), 0, -360 / nrow(tb_studio_filtered2))),
+                  panel.grid = element_blank(),
+                  panel.background = element_rect(fill = "white", color = "white"),
+                  panel.grid.major.y = element_blank())
+        }
+        
         gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
       })
       
