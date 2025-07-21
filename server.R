@@ -274,26 +274,51 @@ function(input, output, session) {
       #### Score per studio ####
       
       output$score_studio_plot <- renderGirafe({
-        gg <- ggplot(df_studio[df_studio$type %in% input$listType
-                               & df_studio$year %in% min(input$listYear):max(input$listYear)
-                               & df_studio$studio %in% studios_to_print, ]) +
+        mean_score_studio <- tapply(df_studio$score[df_studio$type %in% input$listType
+                                                    & df_studio$year %in% min(input$listYear):max(input$listYear)
+                                                    & df_studio$studio %in% studios_to_print], 
+                                    df_studio$studio[df_studio$type %in% input$listType
+                                                     & df_studio$year %in% min(input$listYear):max(input$listYear)
+                                                     & df_studio$studio %in% studios_to_print], 
+                                    mean)
+        mean_score_studio <- round(mean_score_studio, 2)
+        gg <- ggplot(data = df_studio[df_studio$type %in% input$listType
+                                      & df_studio$year %in% min(input$listYear):max(input$listYear)
+                                      & df_studio$studio %in% studios_to_print, ]) +
           geom_boxplot_interactive(aes(x = score, y = factor(studio, levels = rev(studios_to_print))), fill = "darkolivegreen4") +
+          annotate("label", 
+                   x = mean_score_studio, 
+                   y = factor(names(mean_score_studio), levels = rev(studios_to_print)),
+                   label = mean_score_studio, 
+                   fill = "darkolivegreen2") +
           labs(x = element_blank(), y = element_blank()) +
           ggtitle("Score per studio") +
           scale_x_continuous(breaks = 1:10) +
           coord_cartesian(xlim = c(1, 10)) +
-          theme_minimal(base_family = font_plot, base_size = 12) +
-          theme()
+          theme_minimal(base_family = font_plot, base_size = 12)
         gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
       })
       
       #### Score per genre ####
       
       output$score_genres_plot <- renderGirafe({
+        mean_score_genres <- tapply(df_genre$score[df_genre$type %in% input$listType
+                                                   & df_genre$year %in% min(input$listYear):max(input$listYear)
+                                                   & df_genre$genre %in% genres_to_print], 
+                                    df_genre$genre[df_genre$type %in% input$listType
+                                                   & df_genre$year %in% min(input$listYear):max(input$listYear)
+                                                   & df_genre$genre %in% genres_to_print], 
+                                    mean)
+        mean_score_genres <- round(mean_score_genres, 2)
         gg <- ggplot(df_genre[df_genre$type %in% input$listType
                               & df_genre$year %in% min(input$listYear):max(input$listYear)
                               & df_genre$genre %in% genres_to_print, ]) +
           geom_boxplot_interactive(aes(x = score, y = factor(genre, levels = rev(genres_to_print))), fill = "darkolivegreen4") +
+          annotate("label", 
+                   x = mean_score_genres, 
+                   y = factor(names(mean_score_genres), levels = rev(genres_to_print)),
+                   label = mean_score_genres, 
+                   fill = "darkolivegreen2") +
           labs(x = element_blank(), y = element_blank()) +
           ggtitle("Score per genre") +
           scale_x_continuous(breaks = 1:10) +
