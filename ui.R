@@ -77,7 +77,7 @@ ui <- dashboardPage(
               ),
               fluidRow(
                 box(width = 4, checkboxInput("switch_studio", "Polar coordinates"), girafeOutput("studio_plot", height = "100%")),
-                box(width = 4, girafeOutput("score_plot", height = "100%")),
+                box(width = 4, checkboxInput("switch_score", "Polar coordinates"), girafeOutput("score_plot", height = "100%")),
                 box(width = 4, girafeOutput("genres_plot", height = "100%"))
               ),
               fluidRow(
