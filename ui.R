@@ -84,6 +84,9 @@ ui <- dashboardPage(
                 box(width = 4, girafeOutput("score_studio_plot", height = "100%")),
                 box(width = 4, girafeOutput("score_genres_plot", height = "100%"))
               ),
+              fluidRow(
+                box(width = 4, girafeOutput("scoremean_plot", height = "100%"))
+              ),
               
               ### Lists to achieve ####
               

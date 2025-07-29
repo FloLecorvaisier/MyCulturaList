@@ -83,6 +83,7 @@ function(input, output, session) {
           df_all$year[i] <- list_of_animes[[i]]$node$start_season$year
           df_all$season[i] <- list_of_animes[[i]]$node$start_season$season
           df_all$score[i] <- list_of_animes[[i]]$list_status$score
+          df_all$mean[i] <- list_of_animes[[i]]$node$mean
           studio <- character()
           for (j in 1:length(list_of_animes[[i]]$node$studios)) {
             studio <- c(studio, list_of_animes[[i]]$node$studios[[j]]$name)
@@ -96,9 +97,7 @@ function(input, output, session) {
         }
       }
       df_all <- df_all[df_all$season != 0, ] ## Dirty method to remove unfinished animes
-      # df_all$type[df_all$type == "tv_special"] <- "special"
 
-      
       #### Number of animes per season ####
       
       table_season <- as.data.frame(with(df_all, table(type, year, season)))
@@ -131,11 +130,13 @@ function(input, output, session) {
         reacVals$clicked = "season"
         session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'score_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
         session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
         })
       observeEvent(input$score_plot_selected, {
         reacVals$clicked = "score"
         session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
         session$sendCustomMessage(type = 'season_plot_set', message = character(0))
         session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
         })
@@ -143,10 +144,19 @@ function(input, output, session) {
         reacVals$clicked = "studio"
         session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'score_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
         session$sendCustomMessage(type = 'season_plot_set', message = character(0))
       })
       observeEvent(input$genres_plot_selected, {
         reacVals$clicked = "genres"
+        session$sendCustomMessage(type = 'score_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
+      })
+      observeEvent(input$scoremean_plot_selected, {
+        reacVals$clicked = "scoremean"
+        session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'season_plot_set', message = character(0))
         session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
@@ -167,6 +177,12 @@ function(input, output, session) {
           out <- df_all$title[df_all$score %in% input$score_plot_selected
                               & df_all$type %in% input$listType
                               & df_all$year %in% min(input$listYear):max(input$listYear)]
+        }
+        if (reacVals$clicked == "scoremean") {
+          out <- df_all$title[df_all$title2 %in% input$scoremean_plot_selected
+                              & df_all$type %in% input$listType
+                              & df_all$year %in% min(input$listYear):max(input$listYear)]
+          print(out)
         }
         if (reacVals$clicked == "studio") {
           out <- df_studio$title[df_studio$studio %in% input$studio_plot_selected
@@ -373,6 +389,55 @@ function(input, output, session) {
           theme()
         gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
       })
+      
+      #### Correlation score/mean ####
+      
+      ## Rounding to first decimal for greater readibility
+      df_all$xmean <- round(df_all$mean, 1)
+      df_all$xmean <- floor(df_all$mean * 10) / 10
+      
+      ## Coloring according to score VS mean
+      df_all$sup <- df_all$score > df_all$mean
+      df_all <- df_all[order(df_all$sup), ]
+      
+      ## Counting the number of repetitions per group of xmean and score
+      df_all <- df_all %>%
+        group_by(xmean, score) %>%
+        mutate(n = row_number(),
+               count = n()) %>%
+        ungroup()
+      
+      ## Finding the highest number of duplicates (needed for next step and adaptability of different df)
+      max_dup <- max(df_all$count)
+      
+      ## Calculating the offset
+      df_all <- df_all %>%
+        group_by(xmean, score) %>%
+        mutate(n = row_number(),
+               offset = (n - mean(n)) * 1 / max_dup,
+               xscore = score + offset)
+      
+      ## replacing "'" else data_id does not work
+      df_all$title2 <- gsub("'", "XXX", df_all$title)
+      
+      output$scoremean_plot <- renderGirafe({
+        gg <- ggplot(df_all[df_all$type %in% input$listType
+                            & df_all$year %in% min(input$listYear):max(input$listYear), ]) +
+          geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+          geom_point_interactive(aes(x = xscore, y = xmean, color = sup, data_id = title2,
+                                     tooltip = paste0(title, "\nUser score: ", score, "\nMAL score: ", mean)), 
+                                 show.legend = F, size = 1) +
+          scale_x_continuous(breaks = 1:10) +
+          scale_y_continuous(breaks = 1:10) +
+          scale_color_manual(values = c("darkolivegreen3", "darkolivegreen4")) +
+          coord_cartesian(xlim = c(1, 10), ylim = c(1, 10)) +
+          labs(x = "Personal score", y = "Mean MAL users score") +
+          theme_minimal(base_family = font_plot, base_size = 12) +
+          theme(panel.grid.minor.x = element_blank())
+        gir <- girafe(ggobj = gg, options = list(opts_sizing(rescale = TRUE),
+                                                 opts_hover(css = "r:2pt;")))
+      })
+      
       
       #### Lists to complete ####
       
