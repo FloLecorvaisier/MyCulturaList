@@ -51,8 +51,11 @@ ui <- dashboardPage(
                                        "TV Specials" = "tv_special", "CMs" = "cm", "PVs" = "pv", "Musics" = "music", "Unknown" = "unknown"), 
                                      selected = c("tv", "movie", "ona", "ova", "special", "tv_special")),
                 ),
-                box(width = 3,
-                    sliderInput("listYear", "Year(s) to show", 1917, year(today()), value = c(1917, year(today())), dragRange = T, sep = ""))
+                box(width = 3, title = "Quantitative filters",
+                    sliderInput("listYear", "Year(s) to show", 1917, year(today()), value = c(1917, year(today())), dragRange = T, sep = ""),
+                    sliderInput("listScore", "User score(s) to show (WIP)", 1, 10, value = c(1, 10), dragRange = T, sep = ""),
+                    sliderInput("listMean", "MAL mean(s) to show (WIP)", 1, 10, .2, value = c(1, 10), dragRange = T, sep = "")
+                )
               ),
               fluidRow(
                 do.call(tabBox, c(id = "valueBox", height = "310px", width = 12, lapply(infobox_meta2$type, function(i) {
@@ -70,14 +73,14 @@ ui <- dashboardPage(
                 })))
               ),
               fluidRow(
-                box(girafeOutput("season_plot", height = "100%")),
+                box(girafeOutput("n_season_plot", height = "100%")),
                 box(h3("List of animes in the selection"),
                     style = "max-height: 610px; overflow-y: auto;", 
                     htmlOutput("list_of_animes"))
               ),
               fluidRow(
                 box(width = 4, checkboxInput("switch_studio", "Polar coordinates"), girafeOutput("studio_plot", height = "100%")),
-                box(width = 4, checkboxInput("switch_score", "Polar coordinates"), girafeOutput("score_plot", height = "100%")),
+                box(width = 4, checkboxInput("switch_score", "Polar coordinates"), girafeOutput("n_score_plot", height = "100%")),
                 box(width = 4, girafeOutput("genres_plot", height = "100%"))
               ),
               fluidRow(

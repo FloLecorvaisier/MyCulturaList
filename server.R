@@ -10,6 +10,12 @@ reacVals <- reactiveValues()
 
 function(input, output, session) {
   
+  # for (file in list.files("func")) {
+  #   source(paste0("func/", file))
+  # }
+  source("func/gg-n-season.R")
+  source("func/gg-n-score.R")
+  
   ## Reactive value for clicked element
   
   KEY <- readLines("MAL-KEY", warn = F)
@@ -17,7 +23,7 @@ function(input, output, session) {
   font_plot <- "Aleo"
   
   #### Loading data using the API ####
-  
+
   observeEvent(input$load_user, {
     GET(paste0("https://api.myanimelist.net/v2/users/",
                input$user_mal,
@@ -98,31 +104,6 @@ function(input, output, session) {
       }
       df_all <- df_all[df_all$season != 0, ] ## Dirty method to remove unfinished animes
 
-      #### Number of animes per season ####
-      
-      table_season <- as.data.frame(with(df_all, table(type, year, season)))
-      table_season$year <- as.numeric(as.character(table_season$year))
-      table_season$season <- factor(table_season$season, levels = c("winter", "spring", "summer", "fall"))
-
-      output$season_plot <- renderGirafe({
-        tb_season_filtered <- table_season[table_season$type %in% input$listType
-                                           & table_season$year %in% min(input$listYear):max(input$listYear), ] |> 
-          group_by(season, year) |>
-          summarise(Freq = sum(Freq))
-        gg <- ggplot(tb_season_filtered) +
-          geom_col_interactive(aes(x = year, y = Freq, fill = season, tooltip = Freq, data_id = paste0(season, year))) +
-          scale_fill_manual(values = c("lightblue1", "olivedrab2", "orangered1", "brown"),
-                            labels = c("Winter", "Spring", "Summer", "Fall")) +
-          scale_x_continuous(limits = c(min(df_all$year) - 1, max(df_all$year) + 1), breaks = seq(1960, 2020, 10)) +
-          scale_y_continuous(limits = c(0, max(tapply(table_season$Freq, table_season$year, sum))), breaks = seq(0, 50, 5)) +
-          labs(x = element_blank(), y = element_blank(), fill = element_blank()) +
-          ggtitle("Number of animes watched per season of first diffusion") +
-          theme_minimal(base_family = font_plot, base_size = 10) +
-          theme(legend.position = "bottom")
-        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
-      })
-      
-      
       #### List of animes in selection ####
       
       ## To adapt to whatever plot was clicked and unselect other clicked plots.
@@ -132,14 +113,14 @@ function(input, output, session) {
         session$sendCustomMessage(type = 'score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
         session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
-        })
+      })
       observeEvent(input$score_plot_selected, {
         reacVals$clicked = "score"
         session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
         session$sendCustomMessage(type = 'season_plot_set', message = character(0))
         session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
-        })
+      })
       observeEvent(input$studio_plot_selected, {
         reacVals$clicked = "studio"
         session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
@@ -182,7 +163,6 @@ function(input, output, session) {
           out <- df_all$title[df_all$title2 %in% input$scoremean_plot_selected
                               & df_all$type %in% input$listType
                               & df_all$year %in% min(input$listYear):max(input$listYear)]
-          print(out)
         }
         if (reacVals$clicked == "studio") {
           out <- df_studio$title[df_studio$studio %in% input$studio_plot_selected
@@ -202,103 +182,36 @@ function(input, output, session) {
         HTML(paste0(selection(), collapse = "<br/>"))
       })
       
-
-      #### Number of animes per personal score ####
-
-      table_score <- as.data.frame(with(df_all, table(type, year, score)))
-      table_score$score <- as.numeric(as.character(table_score$score))
-
-      output$score_plot <- renderGirafe({
-        tb_score_filtered <- table_score[table_score$type %in% input$listType
-                                         & table_score$year %in% min(input$listYear):max(input$listYear), ] |> 
-          group_by(score) |>
-          summarise(Freq = sum(Freq))
-        tb_score_filtered2 <- rbind(tb_score_filtered, data.frame(score = 0, Freq = 0)) ## For polar coord version
-        if (!input$switch_score) {
-          gg <- ggplot(tb_score_filtered) +
-            geom_col_interactive(aes(x = score, y = Freq, tooltip = Freq, data_id = score), fill = "darkolivegreen4") +
-            scale_x_continuous(breaks = 1:10, limits = c(.5, 10.5)) +
-            labs(x = element_blank(), y = element_blank()) +
-            ggtitle("Number of animes watched per personal score") +
-            theme_minimal(base_family = font_plot, base_size = 12)
-        } else {
-          gg <- ggplot(tb_score_filtered2) +
-            geom_hline(yintercept = seq(0, 5 * ceiling((max(tb_score_filtered$Freq) + 1) / 5), length.out = 6), color = "gray80") +
-            annotate("segment", x = 0:10, y = 0, yend = 5 * ceiling((max(tb_score_filtered$Freq) + 1) / 5), color = "gray80") +
-            geom_col_interactive(aes(y = Freq , x = score, tooltip = Freq, data_id = score), fill = "darkolivegreen4") +
-            annotate("label", x = 0, y = seq(0, (5 * ceiling((max(tb_score_filtered$Freq) + 1) / 5)), length.out = 6), 
-                     label = seq(0, (5 * ceiling((max(tb_score_filtered$Freq)) / 5)), length.out = 6), 
-                     color = "gray30", label.size = 0) +
-            scale_x_continuous(breaks = 1:10) +
-            labs(x = element_blank(), y = element_blank()) +
-            ggtitle("Number of animes watched per personal score") +
-            ylim(- 5 * ceiling((max(tb_score_filtered$Freq) + 1) / 5 ** 2), 5 * ceiling((max(tb_score_filtered$Freq) + 1) / 5)) +
-            theme_minimal(base_family = font_plot, base_size = 12) +
-            coord_polar(start = - pi / 11) +
-            theme(axis.text.y = element_blank(),
-                  panel.grid = element_blank(),
-                  panel.background = element_rect(fill = "white", color = "white"),
-                  panel.grid.major.y = element_blank())
-        }
-        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+      ## Listing the filters
+      filters <- reactive({
+        list(Type = input$listType,
+             minYear = min(input$listYear),
+             maxYear = max(input$listYear))
       })
       
-      #### Number of animes per studio ####
+      #### Number of animes per... ####
+      
+      ##### ...season ####
+      ## func/gg-n-season.R
+      
+      output$n_season_plot <- renderGirafe({
+        gg_n_season(df_all, font_plot, filters())
+      })
         
-      df_studio <- data.frame("studio" = unlist(strsplit(paste(df_all$studio, collapse = "|"), "\\|")))
-      df_studio$title <- rep(df_all$title, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the title for each
-      df_studio$type <- rep(df_all$type, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the type for each
-      df_studio$year <- rep(df_all$year, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the year for each
-      df_studio$score <- rep(df_all$score, times = lengths(regmatches(df_all$studio, gregexpr("\\|", df_all$studio))) + 1) ## To add the year for each
-      
-      table_studio <- as.data.frame(with(df_studio, table(type, year, studio)))
-      
-      ## For now changing studios to print does not work because "observeEvent"is dependent on the previous one, i.e. it only updates when new user is added
-      studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType
-                                                       & table_studio$year %in% min(input$listYear):max(input$listYear), ],
-                                          tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
-      
-      output$studio_plot <- renderGirafe({
-        tb_studio_filtered <- table_studio[table_studio$type %in% input$listType
-                                           & table_studio$year %in% min(input$listYear):max(input$listYear)
-                                           & table_studio$studio %in% studios_to_print, ] |> 
-          group_by(studio) |>
-          summarise(Freq = sum(Freq))
-        tb_studio_filtered2 <- rbind(tb_studio_filtered, data.frame(studio = "", Freq = 0)) ## For polar coord version
-        if (!input$switch_studio) {
-          gg <- ggplot(tb_studio_filtered) +
-            geom_col_interactive(aes(x = Freq , y = factor(studio, levels = rev(studios_to_print)), tooltip = Freq, data_id = studio), fill = "darkolivegreen4") +
-            labs(x = element_blank(), y = element_blank()) +
-            ggtitle("Number of animes watched per studio") +
-            theme_minimal(base_family = font_plot, base_size = 12) +
-            theme()
-        } else {
-          gg <- ggplot(tb_studio_filtered2) +
-            geom_hline(yintercept = seq(0, 5 * ceiling((max(tb_studio_filtered$Freq) + 1) / 5), length.out = 6), color = "gray80") +
-            geom_segment(x = 1:nrow(tb_studio_filtered2), y = 0, yend = 5 * ceiling((max(tb_studio_filtered$Freq) + 1) / 5), color = "gray80") +
-            geom_col_interactive(aes(y = Freq , x = factor(studio, levels = rev(c("", studios_to_print))), tooltip = Freq, data_id = studio), 
-                                 fill = "darkolivegreen4") +
-            annotate("label",
-                     x = 11,
-                     y = seq(0,5 * ceiling((max(tb_studio_filtered$Freq) + 1) / 5), length.out = 6),
-                     label = seq(0,5 * ceiling((max(tb_studio_filtered$Freq) + 1) / 5), length.out = 6),
-                     color = "gray30", label.size = 0) +
-            labs(x = element_blank(), y = element_blank()) +
-            ggtitle("Number of animes watched per studio") +
-            ylim(-5 * ceiling((max(tb_studio_filtered$Freq) + 1) / 5 ** 2), 5 * ceiling((max(tb_studio_filtered$Freq) + 1) / 5)) +
-            theme_minimal(base_family = font_plot, base_size = 12) +
-            coord_polar(start = pi / nrow(tb_studio_filtered2)) +
-            theme(axis.text.y = element_blank(),
-                  axis.text.x = element_text(hjust = 1, 
-                                             angle = seq(360 - 360 / nrow(tb_studio_filtered2), 0, -360 / nrow(tb_studio_filtered2))),
-                  panel.grid = element_blank(),
-                  panel.background = element_rect(fill = "white", color = "white"),
-                  panel.grid.major.y = element_blank())
-        }
-        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+      ##### ...personal score ####
+      ## func/gg-n-score.R
+
+      output$n_score_plot <- renderGirafe({
+        gg_n_score(df_all, font_plot, filters(), switch = input$switch_score)
       })
       
-      #### Number of animes per genre ####
+      ##### ...studio ####
+        
+      output$studio_plot <- renderGirafe({
+        gg_n_score(df_all, font_plot, filters(), switch = input$switch_studio)
+      })
+      
+      ##### ...genre ####
       
       df_genre <- data.frame("genre" = unlist(strsplit(paste(df_all$genre, collapse = "|"), "\\|")))
       df_genre$title <- rep(df_all$title, times = lengths(regmatches(df_all$genre, gregexpr("\\|", df_all$genre))) + 1) ## To add the title for each
@@ -333,9 +246,14 @@ function(input, output, session) {
         gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
       })
       
-      #### Score per studio ####
+      #### Score per... ####
+      
+      ##### ...studio ####
       
       output$score_studio_plot <- renderGirafe({
+        studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType
+                                                         & table_studio$year %in% min(input$listYear):max(input$listYear), ],
+                                            tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
         mean_score_studio <- tapply(df_studio$score[df_studio$type %in% input$listType
                                                     & df_studio$year %in% min(input$listYear):max(input$listYear)
                                                     & df_studio$studio %in% studios_to_print], 
@@ -361,7 +279,7 @@ function(input, output, session) {
         gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
       })
       
-      #### Score per genre ####
+      ##### ...genre ####
       
       output$score_genres_plot <- renderGirafe({
         mean_score_genres <- tapply(df_genre$score[df_genre$type %in% input$listType
