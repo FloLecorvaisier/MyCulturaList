@@ -15,6 +15,7 @@ function(input, output, session) {
   # }
   source("func/gg-n-season.R")
   source("func/gg-n-score.R")
+  source("func/gg-n-studio.R")
   
   ## Reactive value for clicked element
   
@@ -107,40 +108,40 @@ function(input, output, session) {
       #### List of animes in selection ####
       
       ## To adapt to whatever plot was clicked and unselect other clicked plots.
-      observeEvent(input$season_plot_selected, {
+      observeEvent(input$n_season_plot_selected, {
         reacVals$clicked = "season"
-        session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
       })
-      observeEvent(input$score_plot_selected, {
+      observeEvent(input$n_score_plot_selected, {
         reacVals$clicked = "score"
-        session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'season_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
       })
-      observeEvent(input$studio_plot_selected, {
+      observeEvent(input$n_studio_plot_selected, {
         reacVals$clicked = "studio"
-        session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
       })
-      observeEvent(input$genres_plot_selected, {
+      observeEvent(input$n_genres_plot_selected, {
         reacVals$clicked = "genres"
-        session$sendCustomMessage(type = 'score_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'season_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
       })
       observeEvent(input$scoremean_plot_selected, {
         reacVals$clicked = "scoremean"
-        session$sendCustomMessage(type = 'genres_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'score_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'season_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
       })
       
       ## Prepares the titles that will be rendered.
@@ -150,12 +151,12 @@ function(input, output, session) {
           return()
         }
         if (reacVals$clicked == "season") {
-          out <- df_all$title[paste0(df_all$season, df_all$year) %in% input$season_plot_selected
+          out <- df_all$title[paste0(df_all$season, df_all$year) %in% input$n_season_plot_selected
                               & df_all$type %in% input$listType
                               & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "score") {
-          out <- df_all$title[df_all$score %in% input$score_plot_selected
+          out <- df_all$title[df_all$score %in% input$n_score_plot_selected
                               & df_all$type %in% input$listType
                               & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
@@ -165,12 +166,16 @@ function(input, output, session) {
                               & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "studio") {
-          out <- df_studio$title[df_studio$studio %in% input$studio_plot_selected
-                                 & df_studio$type %in% input$listType
-                                 & df_studio$year %in% min(input$listYear):max(input$listYear)]
+          ## Supplementary loop needed else sapply() returns an error when the plot is unselected.
+          if (!is.null(input$n_studio_plot_selected)) {  
+            cond_studio <- sapply(strsplit(df_all$studio, "\\|"), function(x) input$n_studio_plot_selected %in% x)
+          } else cond_studio <- FALSE
+          out <- df_all$title[cond_studio
+                              & df_all$type %in% input$listType
+                              & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "genres") {
-          out <- df_genre$title[df_genre$genre  %in% input$genres_plot_selected
+          out <- df_genre$title[df_genre$genre  %in% input$n_genres_plot_selected
                                 & df_genre$type %in% input$listType
                                 & df_genre$year %in% min(input$listYear):max(input$listYear)]
         }
@@ -207,8 +212,8 @@ function(input, output, session) {
       
       ##### ...studio ####
         
-      output$studio_plot <- renderGirafe({
-        gg_n_score(df_all, font_plot, filters(), switch = input$switch_studio)
+      output$n_studio_plot <- renderGirafe({
+        gg_n_studio(df_all, font_plot, filters(), switch = input$switch_studio)
       })
       
       ##### ...genre ####
@@ -231,7 +236,7 @@ function(input, output, session) {
                                                       & table_genres$year %in% min(input$listYear):max(input$listYear), ],
                                          tapply(Freq, genre, sum)), decreasing = T))[1:min(10, length(unique(df_genre_genres$genre)))]
       
-      output$genres_plot <- renderGirafe({
+      output$n_genres_plot <- renderGirafe({
         tb_genres_filtered <- table_genres[table_genres$type %in% input$listType
                                            & table_genres$year %in% min(input$listYear):max(input$listYear)
                                            & table_genres$genre %in% genres_to_print, ] |> 

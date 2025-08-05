@@ -79,9 +79,9 @@ ui <- dashboardPage(
                     htmlOutput("list_of_animes"))
               ),
               fluidRow(
-                box(width = 4, checkboxInput("switch_studio", "Polar coordinates"), girafeOutput("studio_plot", height = "100%")),
+                box(width = 4, checkboxInput("switch_studio", "Polar coordinates"), girafeOutput("n_studio_plot", height = "100%")),
                 box(width = 4, checkboxInput("switch_score", "Polar coordinates"), girafeOutput("n_score_plot", height = "100%")),
-                box(width = 4, girafeOutput("genres_plot", height = "100%"))
+                box(width = 4, girafeOutput("n_genres_plot", height = "100%"))
               ),
               fluidRow(
                 box(width = 4, girafeOutput("score_studio_plot", height = "100%")),
