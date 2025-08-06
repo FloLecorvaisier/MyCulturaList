@@ -10,13 +10,10 @@ reacVals <- reactiveValues()
 
 function(input, output, session) {
   
-  # for (file in list.files("func")) {
-  #   source(paste0("func/", file))
-  # }
-  source("func/gg-n-season.R")
-  source("func/gg-n-score.R")
-  source("func/gg-n-studio.R")
-  source("func/gg-score-studio.R")
+  ## Loading external files
+  for (file in list.files("func")) {
+    source(paste0("func/", file))
+  }
   
   ## Reactive value for clicked element
   
@@ -27,14 +24,14 @@ function(input, output, session) {
   #### Loading data using the API ####
 
   observeEvent(input$load_user, {
-    GET(paste0("https://api.myanimelist.net/v2/users/",
+    resp <- GET(paste0("https://api.myanimelist.net/v2/users/",
                input$user_mal,
-               "/animelist?fields=list_status,start_season,studios,media_type,mean,genres,average_episode_duration,num_times_rewatched&limit=1000&nsfw=true"),
-        add_headers("X-MAL-CLIENT-ID" = KEY)) -> x
+               "/animelist?fields=list_status,start_season,studios,media_type,mean,popularity,rank,genres,average_episode_duration,num_list_users,num_times_rewatched&limit=1000&nsfw=true"),
+        add_headers("X-MAL-CLIENT-ID" = KEY))
 
-    xx <- fromJSON(content(x, "text"), simplifyVector = FALSE)
-    if (object.size(xx$data) > 1024) { ## To check that the user name exists
-      list_of_animes <- xx$data
+    list_all <- fromJSON(content(resp, "text"), simplifyVector = FALSE)
+    if (object.size(list_all$data) > 1024) { ## To check that the user name exists
+      list_of_animes <- list_all$data
 
       #### Infoboxes ####
 
@@ -83,6 +80,9 @@ function(input, output, session) {
                            season = numeric(length(list_of_animes)),
                            score = numeric(length(list_of_animes)),
                            mean = numeric(length(list_of_animes)),
+                           popularity = numeric(length(list_of_animes)),
+                           num_list_users = numeric(length(list_of_animes)),
+                           rank = numeric(length(list_of_animes)),
                            studio = character(length(list_of_animes)),
                            genre = character(length(list_of_animes)))
 
@@ -96,6 +96,9 @@ function(input, output, session) {
         df_all$season[i] <- ifelse(!is.null(list_of_animes[[i]]$node$start_season$season), list_of_animes[[i]]$node$start_season$season, NA)
         df_all$score[i] <- list_of_animes[[i]]$list_status$score
         df_all$mean[i] <- ifelse(!is.null(list_of_animes[[i]]$node$mean), list_of_animes[[i]]$node$mean, NA)
+        df_all$popularity[i] <- ifelse(!is.null(list_of_animes[[i]]$node$popularity), list_of_animes[[i]]$node$popularity, NA)
+        df_all$rank[i] <- ifelse(!is.null(list_of_animes[[i]]$node$rank), list_of_animes[[i]]$node$rank, NA)
+        df_all$num_list_users[i] <- list_of_animes[[i]]$node$num_list_users
         studio <- character(length(list_of_animes[[i]]$node$studios))
         if (length(list_of_animes[[i]]$node$studios) > 0) {
           for (j in 1:length(list_of_animes[[i]]$node$studios)) {
@@ -111,43 +114,81 @@ function(input, output, session) {
       }
       df_all <- df_all[df_all$status == "completed", ]
       
+      ## replacing "'" else data_id does not work and many problems arise.
+      df_all$title2 <- gsub("'", "XXX", df_all$title)
+      
       #### List of animes in selection ####
       
       ## To adapt to whatever plot was clicked and unselect other clicked plots.
-      observeEvent(input$n_season_plot_selected, {
-        reacVals$clicked = "season"
+      observeEvent(input$grid_rank_plot_selected, {
+        reacVals$clicked = "grid_rank"
+        # session$sendCustomMessage(type = 'grid_rank_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'grid_popularity_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'score_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
-      })
-      observeEvent(input$n_score_plot_selected, {
-        reacVals$clicked = "score"
-        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
-      })
-      observeEvent(input$n_studio_plot_selected, {
-        reacVals$clicked = "studio"
-        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
+      })
+      observeEvent(input$grid_popularity_plot_selected, {
+        reacVals$clicked = "grid_popularity"
+        session$sendCustomMessage(type = 'grid_rank_plot_set', message = character(0))
+        # session$sendCustomMessage(type = 'grid_popularity_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
       })
       observeEvent(input$n_genres_plot_selected, {
         reacVals$clicked = "genres"
-        session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'grid_rank_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'grid_popularity_plot_set', message = character(0))
+        # session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
+      })
+      observeEvent(input$n_season_plot_selected, {
+        reacVals$clicked = "season"
+        session$sendCustomMessage(type = 'grid_rank_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'grid_popularity_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
+        # session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
+      })
+      observeEvent(input$n_score_plot_selected, {
+        reacVals$clicked = "score"
+        session$sendCustomMessage(type = 'grid_rank_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'grid_popularity_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        # session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
+      })
+      observeEvent(input$n_studio_plot_selected, {
+        reacVals$clicked = "studio"
+        session$sendCustomMessage(type = 'grid_rank_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'grid_popularity_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'n_score_plot_set', message = character(0))
+        # session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
       })
       observeEvent(input$scoremean_plot_selected, {
         reacVals$clicked = "scoremean"
+        session$sendCustomMessage(type = 'grid_rank_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'grid_popularity_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_genres_plot_set', message = character(0))
-        session$sendCustomMessage(type = 'score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_season_plot_set', message = character(0))
+        session$sendCustomMessage(type = 'score_plot_set', message = character(0))
         session$sendCustomMessage(type = 'n_studio_plot_set', message = character(0))
+        # session$sendCustomMessage(type = 'scoremean_plot_set', message = character(0))
       })
       
       ## Prepares the titles that will be rendered.
@@ -155,6 +196,16 @@ function(input, output, session) {
         out <- NULL
         if (is.null(reacVals$clicked)) {
           return()
+        }
+        if (reacVals$clicked == "grid_rank") {
+          out <- df_all$title[df_all$title2 %in% input$grid_rank_plot_selected
+                              & df_all$type %in% input$listType
+                              & df_all$year %in% min(input$listYear):max(input$listYear)]
+        }
+        if (reacVals$clicked == "grid_popularity") {
+          out <- df_all$title[df_all$title2 %in% input$grid_popularity_plot_selected
+                              & df_all$type %in% input$listType
+                              & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "season") {
           out <- df_all$title[paste0(df_all$season, df_all$year) %in% input$n_season_plot_selected
@@ -262,32 +313,6 @@ function(input, output, session) {
       ##### ...studio ####
       
       output$score_studio_plot <- renderGirafe({
-        # studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType
-        #                                                  & table_studio$year %in% min(input$listYear):max(input$listYear), ],
-        #                                     tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
-        # mean_score_studio <- tapply(df_studio$score[df_studio$type %in% input$listType
-        #                                             & df_studio$year %in% min(input$listYear):max(input$listYear)
-        #                                             & df_studio$studio %in% studios_to_print], 
-        #                             df_studio$studio[df_studio$type %in% input$listType
-        #                                              & df_studio$year %in% min(input$listYear):max(input$listYear)
-        #                                              & df_studio$studio %in% studios_to_print], 
-        #                             mean)
-        # mean_score_studio <- round(mean_score_studio, 2)
-        # gg <- ggplot(data = df_studio[df_studio$type %in% input$listType
-        #                               & df_studio$year %in% min(input$listYear):max(input$listYear)
-        #                               & df_studio$studio %in% studios_to_print, ]) +
-        #   geom_boxplot_interactive(aes(x = score, y = factor(studio, levels = rev(studios_to_print))), fill = "darkolivegreen4") +
-        #   annotate("label", 
-        #            x = mean_score_studio, 
-        #            y = factor(names(mean_score_studio), levels = rev(studios_to_print)),
-        #            label = mean_score_studio, 
-        #            fill = "darkolivegreen2") +
-        #   labs(x = element_blank(), y = element_blank()) +
-        #   ggtitle("Score per studio") +
-        #   scale_x_continuous(breaks = 1:10) +
-        #   coord_cartesian(xlim = c(1, 10)) +
-        #   theme_minimal(base_family = font_plot, base_size = 12)
-        # gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
         gg_score_studio(df_all, font_plot, filters(), switch = input$switch_studio)
       })
       
@@ -347,9 +372,6 @@ function(input, output, session) {
                offset = (n - mean(n)) * 1 / max_dup,
                xscore = score + offset)
       
-      ## replacing "'" else data_id does not work
-      df_all$title2 <- gsub("'", "XXX", df_all$title)
-      
       output$scoremean_plot <- renderGirafe({
         gg <- ggplot(df_all[df_all$type %in% input$listType
                             & df_all$year %in% min(input$listYear):max(input$listYear), ]) +
@@ -368,6 +390,21 @@ function(input, output, session) {
                                                  opts_hover(css = "r:2pt;")))
       })
       
+      #### Grid of... ####
+      
+      ##### ...popularity ####
+      ## func/gg-grid-popularity.R
+      
+      output$grid_popularity_plot <- renderGirafe({
+        gg_grid_popularity(df_all, font_plot)
+      })
+      
+      ##### ...rank ####
+      ## func/gg-grid-rank.R
+      
+      output$grid_rank_plot <- renderGirafe({
+        gg_grid_rank(df_all, font_plot)
+      })
       
       #### Lists to complete ####
       
@@ -433,9 +470,9 @@ function(input, output, session) {
           )
         })
       })
-    } else if (xx$error == "bad_request") {
+    } else if (list_all$error == "bad_request") {
       showNotification("Invalid cliend ID!", type = "error")
-    } else if (xx$error == "not_found") {
+    } else if (list_all$error == "not_found") {
       showNotification("User not found!", type = "error")
     }
   }) ## End of the main observeEvent

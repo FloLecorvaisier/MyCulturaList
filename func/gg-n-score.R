@@ -33,4 +33,5 @@ gg_n_score <- function(df_all, font_plot, filters, switch) {
             panel.grid.major.y = element_blank())
   }
   gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+  return(gir)
 }

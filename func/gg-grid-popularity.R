@@ -1,0 +1,44 @@
+gg_grid_popularity <- function(df_all, font_plot) {
+  
+  # df_all <- dfx ## Used in checkup
+  
+  nsup10K <- sum(df_all$popularity > 1e4)
+  
+  ## Limit to 10K
+  df_all <- df_all[df_all$popularity <= 1e4, ]
+  
+  df_all$xpop = (df_all$popularity - 1) %% 100
+  df_all$ypop = - df_all$popularity %/% 100 + 1
+  
+  df_pop <- data.frame(x = 0:99,
+                       y = rep(0:-99, each = 100),
+                       val = 0)
+  df_pop$val <- paste(df_pop$x, df_pop$y) %in% paste(df_all$xpop, df_all$ypop)
+  df_pop$title[df_pop$val == T] <- df_all$title[order(df_all$popularity)][df_all$popularity <= 10000]
+  df_pop$title[is.na(df_pop$title)] <- "" ## To prevent that hovering prints "NA"
+  
+  ## replacing "'" else data_id does not work
+  df_pop$title2 <- gsub("'", "XXX", df_pop$title)
+  
+  df_pop$popularity[df_pop$val == T] <- df_all$popularity[order(df_all$popularity)]
+  df_pop$popularity[is.na(df_pop$popularity)] <- "" ## To prevent that hovering prints "NA"
+  
+  gg <- ggplot(df_pop) +
+    geom_tile_interactive(aes(x = x, y = y, fill = val, 
+                              tooltip = paste0(title, ifelse(val == T, "\nRank: ", ""), popularity), 
+                              data_id = title2), 
+                          show.legend = F, color = "grey") +
+    geom_hline(yintercept = seq(0, -100, -10) + .5) +
+    annotate("text", x = -25, y = seq(-5, -95, -10), 
+             label = paste0(1000 * 0:9 + 1, " - ", 1000 * 1:10),
+             hjust = 0, vjust = 0, family = font_plot) +
+    scale_fill_manual(values = c("transparent", "darkolivegreen4")) +
+    # scale_fill_manual(values = c("darkolivegreen4")) +
+    ggtitle("Completion grid of most popular animes",
+            subtitle = paste0("Number of animes ranked > 10000: ", nsup10K)) +
+    theme() +
+    theme_void(base_family = font_plot)
+  
+  gir <- girafe(ggobj = gg, options = list(opts_sizing(rescale = TRUE)))
+  return(gir)
+}
