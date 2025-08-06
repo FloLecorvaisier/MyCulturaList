@@ -16,6 +16,7 @@ function(input, output, session) {
   source("func/gg-n-season.R")
   source("func/gg-n-score.R")
   source("func/gg-n-studio.R")
+  source("func/gg-score-studio.R")
   
   ## Reactive value for clicked element
   
@@ -76,35 +77,40 @@ function(input, output, session) {
       #### Summary of the data ####
 
       df_all <- data.frame(title = character(length(list_of_animes)),
+                           status = character(length(list_of_animes)),
                            type = character(length(list_of_animes)),
                            year = numeric(length(list_of_animes)),
                            season = numeric(length(list_of_animes)),
                            score = numeric(length(list_of_animes)),
+                           mean = numeric(length(list_of_animes)),
                            studio = character(length(list_of_animes)),
                            genre = character(length(list_of_animes)))
 
       for (i in 1:length(list_of_animes)) {
-        if (list_of_animes[[i]]$list_status$status == "completed") {
-          df_all$title[i] <- list_of_animes[[i]]$node$title
-          df_all$type[i] <- list_of_animes[[i]]$node$media_type
-          df_all$year[i] <- list_of_animes[[i]]$node$start_season$year
-          df_all$season[i] <- list_of_animes[[i]]$node$start_season$season
-          df_all$score[i] <- list_of_animes[[i]]$list_status$score
-          df_all$mean[i] <- list_of_animes[[i]]$node$mean
-          studio <- character()
+        df_all$title[i] <- list_of_animes[[i]]$node$title
+        df_all$status[i] <- list_of_animes[[i]]$list_status$status
+        df_all$type[i] <- list_of_animes[[i]]$node$media_type
+        
+        ## ifelse() needed because some animes do not have a release date yet.
+        df_all$year[i] <- ifelse(!is.null(list_of_animes[[i]]$node$start_season$year), list_of_animes[[i]]$node$start_season$year, NA)
+        df_all$season[i] <- ifelse(!is.null(list_of_animes[[i]]$node$start_season$season), list_of_animes[[i]]$node$start_season$season, NA)
+        df_all$score[i] <- list_of_animes[[i]]$list_status$score
+        df_all$mean[i] <- ifelse(!is.null(list_of_animes[[i]]$node$mean), list_of_animes[[i]]$node$mean, NA)
+        studio <- character(length(list_of_animes[[i]]$node$studios))
+        if (length(list_of_animes[[i]]$node$studios) > 0) {
           for (j in 1:length(list_of_animes[[i]]$node$studios)) {
-            studio <- c(studio, list_of_animes[[i]]$node$studios[[j]]$name)
+            studio[j] <- list_of_animes[[i]]$node$studios[[j]]$name
           }
           df_all$studio[i] <- paste(studio, collapse = "|")
-          genre <- character()
-          for (j in 1:length(list_of_animes[[i]]$node$genres)) {
-            genre <- c(genre, list_of_animes[[i]]$node$genres[[j]]$name)
-          }
-          df_all$genre[i] <- paste(genre, collapse = "|")
         }
+        genre <- character()
+        for (j in 1:length(list_of_animes[[i]]$node$genres)) {
+          genre <- c(genre, list_of_animes[[i]]$node$genres[[j]]$name)
+        }
+        df_all$genre[i] <- paste(genre, collapse = "|")
       }
-      df_all <- df_all[df_all$season != 0, ] ## Dirty method to remove unfinished animes
-
+      df_all <- df_all[df_all$status == "completed", ]
+      
       #### List of animes in selection ####
       
       ## To adapt to whatever plot was clicked and unselect other clicked plots.
@@ -256,32 +262,33 @@ function(input, output, session) {
       ##### ...studio ####
       
       output$score_studio_plot <- renderGirafe({
-        studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType
-                                                         & table_studio$year %in% min(input$listYear):max(input$listYear), ],
-                                            tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
-        mean_score_studio <- tapply(df_studio$score[df_studio$type %in% input$listType
-                                                    & df_studio$year %in% min(input$listYear):max(input$listYear)
-                                                    & df_studio$studio %in% studios_to_print], 
-                                    df_studio$studio[df_studio$type %in% input$listType
-                                                     & df_studio$year %in% min(input$listYear):max(input$listYear)
-                                                     & df_studio$studio %in% studios_to_print], 
-                                    mean)
-        mean_score_studio <- round(mean_score_studio, 2)
-        gg <- ggplot(data = df_studio[df_studio$type %in% input$listType
-                                      & df_studio$year %in% min(input$listYear):max(input$listYear)
-                                      & df_studio$studio %in% studios_to_print, ]) +
-          geom_boxplot_interactive(aes(x = score, y = factor(studio, levels = rev(studios_to_print))), fill = "darkolivegreen4") +
-          annotate("label", 
-                   x = mean_score_studio, 
-                   y = factor(names(mean_score_studio), levels = rev(studios_to_print)),
-                   label = mean_score_studio, 
-                   fill = "darkolivegreen2") +
-          labs(x = element_blank(), y = element_blank()) +
-          ggtitle("Score per studio") +
-          scale_x_continuous(breaks = 1:10) +
-          coord_cartesian(xlim = c(1, 10)) +
-          theme_minimal(base_family = font_plot, base_size = 12)
-        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+        # studios_to_print <- names(sort(with(table_studio[table_studio$type %in% input$listType
+        #                                                  & table_studio$year %in% min(input$listYear):max(input$listYear), ],
+        #                                     tapply(Freq, studio, sum)), decreasing = T))[1:min(10, length(unique(df_studio$studio)))]
+        # mean_score_studio <- tapply(df_studio$score[df_studio$type %in% input$listType
+        #                                             & df_studio$year %in% min(input$listYear):max(input$listYear)
+        #                                             & df_studio$studio %in% studios_to_print], 
+        #                             df_studio$studio[df_studio$type %in% input$listType
+        #                                              & df_studio$year %in% min(input$listYear):max(input$listYear)
+        #                                              & df_studio$studio %in% studios_to_print], 
+        #                             mean)
+        # mean_score_studio <- round(mean_score_studio, 2)
+        # gg <- ggplot(data = df_studio[df_studio$type %in% input$listType
+        #                               & df_studio$year %in% min(input$listYear):max(input$listYear)
+        #                               & df_studio$studio %in% studios_to_print, ]) +
+        #   geom_boxplot_interactive(aes(x = score, y = factor(studio, levels = rev(studios_to_print))), fill = "darkolivegreen4") +
+        #   annotate("label", 
+        #            x = mean_score_studio, 
+        #            y = factor(names(mean_score_studio), levels = rev(studios_to_print)),
+        #            label = mean_score_studio, 
+        #            fill = "darkolivegreen2") +
+        #   labs(x = element_blank(), y = element_blank()) +
+        #   ggtitle("Score per studio") +
+        #   scale_x_continuous(breaks = 1:10) +
+        #   coord_cartesian(xlim = c(1, 10)) +
+        #   theme_minimal(base_family = font_plot, base_size = 12)
+        # gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+        gg_score_studio(df_all, font_plot, filters(), switch = input$switch_studio)
       })
       
       ##### ...genre ####
