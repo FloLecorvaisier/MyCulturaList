@@ -91,7 +91,9 @@ ui <- dashboardPage(
                 box(width = 4, girafeOutput("scoremean_plot", height = "100%"))
               ),
               fluidRow(
-                box(width = 6, girafeOutput("grid_popularity_plot", height = "100%")),
+                box(width = 6, selectInput("switch_grid_popularity", "Visualization", 
+                                           c("Completion grid" = "grid", "Percentage of completion" = "prop_tot", "Relative distribution" = "prop_rel")),
+                    girafeOutput("grid_popularity_plot", height = "100%")),
                 box(width = 6, girafeOutput("grid_rank_plot", height = "100%"))
               ),
               

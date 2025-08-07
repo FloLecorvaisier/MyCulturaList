@@ -396,7 +396,7 @@ function(input, output, session) {
       ## func/gg-grid-popularity.R
       
       output$grid_popularity_plot <- renderGirafe({
-        gg_grid_popularity(df_all, font_plot)
+        gg_grid_popularity(df_all, font_plot, switch = input$switch_grid_popularity)
       })
       
       ##### ...rank ####
