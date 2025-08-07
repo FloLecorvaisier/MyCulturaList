@@ -37,6 +37,6 @@ gg_score_studio <- function(df_all, font_plot, filters, switch) {
     scale_x_continuous(breaks = 1:10) +
     coord_cartesian(xlim = c(1, 10)) +
     theme_minimal(base_family = font_plot, base_size = 12)
-  gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+  gir <- girafe(ggobj = gg, options = list(opts_sizing(rescale = TRUE)))
   return(gir)
 }

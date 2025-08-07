@@ -30,6 +30,7 @@ gg_grid_popularity <- function(df_all, font_plot, switch) {
   
   ## Data frame with proportions by intervals
   df_prop = data.frame(inter = paste0(1000 * 0:9 + 1, " - ", 1000 * 1:10),
+                       inter2 = levels(inter),
                        prop_tot = as.numeric(table(inter) / 1000),
                        prop_rel = as.numeric(table(inter) / nrow(df_all)))
   
@@ -57,7 +58,7 @@ gg_grid_popularity <- function(df_all, font_plot, switch) {
       theme_void(base_family = font_plot)
   } else if (switch == "prop_tot") {
     gg <- ggplot(df_prop) +
-      geom_col(aes(x = inter, y = prop_tot * 100), fill = "darkolivegreen4") +
+      geom_col_interactive(aes(x = inter, y = prop_tot * 100, data_id = inter2), fill = "darkolivegreen4") +
       geom_hline(yintercept = 100, linetype = "dashed") +
       annotate("text", x = 1:10, y = df_prop$prop_tot * 100 + 3, 
                label = paste(format(df_prop$prop_tot * 100, digits = 1), "%"), family = font_plot) + 
@@ -68,7 +69,7 @@ gg_grid_popularity <- function(df_all, font_plot, switch) {
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   } else if (switch == "prop_rel") {
     gg <- ggplot(df_prop) +
-      geom_col(aes(x = 1, y = prop_rel, fill = inter), show.legend = T) +
+      geom_col_interactive(aes(x = 1, y = prop_rel, fill = inter, data_id = inter2), show.legend = T) +
       annotate("point", x = 1.2, y = yval[rev(df_prop$prop_rel > thrshld)]) +
       annotate("segment", x = 1.2, xend = 1.6, y = yval[rev(df_prop$prop_rel > thrshld)]) +
       annotate("text", x = 1.8, y = yval[rev(df_prop$prop_rel > thrshld)], 

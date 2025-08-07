@@ -114,6 +114,9 @@ function(input, output, session) {
       }
       df_all <- df_all[df_all$status == "completed", ]
       
+      ## Cutting popularity by intervals
+      df_all$inter_pop <- cut(df_all$popularity, seq(0, 1e4, 1e3))
+      
       ## replacing "'" else data_id does not work and many problems arise.
       df_all$title2 <- gsub("'", "XXX", df_all$title)
       
@@ -203,9 +206,16 @@ function(input, output, session) {
                               & df_all$year %in% min(input$listYear):max(input$listYear)]
         }
         if (reacVals$clicked == "grid_popularity") {
-          out <- df_all$title[df_all$title2 %in% input$grid_popularity_plot_selected
-                              & df_all$type %in% input$listType
-                              & df_all$year %in% min(input$listYear):max(input$listYear)]
+          if (input$switch_grid_popularity == "grid") {
+            out <- df_all$title[df_all$title2 %in% input$grid_popularity_plot_selected
+                                & df_all$type %in% input$listType
+                                & df_all$year %in% min(input$listYear):max(input$listYear)]
+          } else {
+            out <- df_all$title[df_all$inter_pop %in% input$grid_popularity_plot_selected
+                                & df_all$type %in% input$listType
+                                & df_all$year %in% min(input$listYear):max(input$listYear)]
+          }
+          
         }
         if (reacVals$clicked == "season") {
           out <- df_all$title[paste0(df_all$season, df_all$year) %in% input$n_season_plot_selected
@@ -305,7 +315,7 @@ function(input, output, session) {
           ggtitle("Number of animes watched per genre") +
           theme_minimal(base_family = font_plot, base_size = 12) +
           theme()
-        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+        gir <- girafe(ggobj = gg, options = list(opts_sizing(rescale = TRUE)))
       })
       
       #### Score per... ####
@@ -342,7 +352,7 @@ function(input, output, session) {
           coord_cartesian(xlim = c(1, 10)) +
           theme_minimal(base_family = font_plot, base_size = 12) +
           theme()
-        gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+        gir <- girafe(ggobj = gg, options = list(opts_sizing(rescale = TRUE)))
       })
       
       #### Correlation score/mean ####

@@ -16,7 +16,7 @@ gg_n_season <- function(df_all, font_plot, filters) {
     ggtitle("Number of animes watched per season of first diffusion") +
     theme_minimal(base_family = font_plot, base_size = 10) +
     theme(legend.position = "bottom")
-  gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+  gir <- girafe(ggobj = gg, options = list(opts_sizing(rescale = TRUE)))
   return(gir)
 }
 

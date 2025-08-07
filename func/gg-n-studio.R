@@ -48,6 +48,6 @@ gg_n_studio <- function(df_all, font_plot, filters, switch) {
             panel.background = element_rect(fill = "white", color = "white"),
             panel.grid.major.y = element_blank())
   }
-  gir <- girafe(ggobj = gg, options = list(opts_selection(type = "single"), opts_sizing(rescale = TRUE)))
+  gir <- girafe(ggobj = gg, options = list(opts_sizing(rescale = TRUE)))
   return(gir)
 }
